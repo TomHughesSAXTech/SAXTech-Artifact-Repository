@@ -858,6 +858,10 @@
                         <div class="stat-number" id="clientCount">0</div>
                         <div class="stat-label">Client Partners</div>
                     </div>
+                    <div class="stat-card" style="background: var(--gradient-accent); color: white;">
+                        <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 500;">Loading...</div>
+                        <div class="stat-label" style="color: white;">Logged In</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1347,6 +1351,22 @@
         // Initialize
         updateStats();
         renderProjects();
+        
+        // Display user info
+        fetch('/.auth/me')
+            .then(response => response.json())
+            .then(data => {
+                if (data.clientPrincipal && data.clientPrincipal.userDetails) {
+                    const email = data.clientPrincipal.userDetails;
+                    const shortEmail = email.length > 20 ? email.substring(0, 17) + '...' : email;
+                    document.getElementById('userEmail').textContent = shortEmail;
+                    document.getElementById('userEmail').title = email;
+                }
+            })
+            .catch(error => {
+                console.error('Error getting user info:', error);
+                document.getElementById('userEmail').textContent = 'Anonymous';
+            });
         
         // Close modals on outside click
         window.addEventListener('click', (e) => {

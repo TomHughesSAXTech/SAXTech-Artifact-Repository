@@ -1,13 +1,51 @@
-// Azure Blob Storage Integration
+// Azure Blob Storage Integration with Azure AD Authentication
 const STORAGE_ACCOUNT = 'saxtechartifactstorage';
 const CONTAINER_NAME = 'artifacts';
 const BLOB_BASE_URL = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}`;
+
+// Get user info from Azure Static Web Apps authentication
+async function getUserInfo() {
+    try {
+        const response = await fetch('/.auth/me');
+        const data = await response.json();
+        return data.clientPrincipal;
+    } catch (error) {
+        console.error('Error getting user info:', error);
+        return null;
+    }
+}
+
+// Check if user is from saxtechnology.com domain
+async function isAuthorizedUser() {
+    const userInfo = await getUserInfo();
+    if (userInfo && userInfo.userDetails) {
+        const email = userInfo.userDetails.toLowerCase();
+        return email.endsWith('@saxtechnology.com');
+    }
+    return false;
+}
 
 // Project storage management
 class AzureBlobManager {
     constructor() {
         this.projects = [];
-        this.loadProjectsFromBlob();
+        this.userInfo = null;
+        this.isAuthenticated = false;
+        this.initializeAuth();
+    }
+
+    // Initialize authentication
+    async initializeAuth() {
+        this.userInfo = await getUserInfo();
+        this.isAuthenticated = await isAuthorizedUser();
+        
+        if (!this.isAuthenticated) {
+            console.log('User not authorized. Redirecting to login...');
+            // Static Web App config will handle redirect
+        } else {
+            console.log('User authenticated:', this.userInfo.userDetails);
+            this.loadProjectsFromBlob();
+        }
     }
 
     // Load projects from blob storage
