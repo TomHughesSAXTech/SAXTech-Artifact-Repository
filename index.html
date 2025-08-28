@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAX Technology Advisors | Enterprise Artifact Repository</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --sax-primary: #00d4ff;
+            --sax-primary-dark: #0099cc;
+            --sax-accent: #7c3aed;
+            --sax-success: #10b981;
+            --sax-warning: #f59e0b;
+            --sax-danger: #ef4444;
+            --sax-dark: #0a0e27;
+            --sax-darker: #060818;
+            --sax-card: #0f1729;
+            --sax-card-hover: #141e36;
+            --sax-border: rgba(0, 212, 255, 0.1);
+            --sax-text: #e2e8f0;
+            --sax-text-dim: #94a3b8;
+            --sax-glass: rgba(15, 23, 41, 0.7);
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-accent: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+            --gradient-dark: linear-gradient(180deg, #0a0e27 0%, #060818 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--sax-darker) url('background.png') center center / cover fixed;
+            color: var(--sax-text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(rgba(10, 14, 39, 0.85), rgba(6, 8, 24, 0.95)),
+                radial-gradient(circle at 20% 50%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(0, 212, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 2;
+            pointer-events: none;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==');
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Header */
+        header {
+            background: var(--sax-glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--sax-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            animation: slideDown 0.6s ease;
+        }
+
+        .header-content {
+            padding: 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-mark {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: white;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-tagline {
+            font-size: 12px;
+            color: var(--sax-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 40px;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 24px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid var(--sax-border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--sax-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 60px 0 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--sax-text-dim);
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--gradient-accent);
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(124, 58, 237, 0.1);
+            color: var(--sax-primary);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(124, 58, 237, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 30px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-icon {
+            font-size: 18px;
+        }
+
+        /* Search and Filter Section */
+        .search-filter-section {
+            background: var(--sax-glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--sax-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease 0.6s both;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--sax-text-dim);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px 14px 48px;
+            background: var(--sax-card);
+            border: 1px solid var(--sax-border);
+            border-radius: 10px;
+            color: var(--sax-text);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--sax-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .filter-select {
+            padding: 14px 20px;
+            background: var(--sax-card);
+            border: 1px solid var(--sax-border);
+            border-radius: 10px;
+            color: var(--sax-text);
+            font-size: 14px;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--sax-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
+            animation: fadeInUp 0.8s ease 0.8s both;
+        }
+
+        .project-card {
+            background: var(--sax-glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--sax-border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-accent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-8px);
+            background: var(--sax-card-hover);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.2);
+        }
+
+        .project-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .project-info {
+            flex: 1;
+        }
+
+        .project-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--sax-text);
+            margin-bottom: 8px;
+        }
+
+        .project-client {
+            font-size: 13px;
+            color: var(--sax-text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-badge {
+            background: var(--gradient-accent);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .project-description {
+            color: var(--sax-text-dim);
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        .project-links {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .link-btn {
+            padding: 8px 16px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--sax-border);
+            border-radius: 8px;
+            color: var(--sax-primary);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .link-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .project-artifacts {
+            border-top: 1px solid var(--sax-border);
+            padding-top: 20px;
+        }
+
+        .artifacts-header {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--sax-text-dim);
+            margin-bottom: 12px;
+        }
+
+        .artifact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .artifact-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid var(--sax-border);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .artifact-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .artifact-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .artifact-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .artifact-name {
+            font-size: 13px;
+            color: var(--sax-text);
+        }
+
+        .artifact-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .artifact-type {
+            font-size: 10px;
+            padding: 3px 8px;
+            background: rgba(124, 58, 237, 0.2);
+            color: var(--sax-primary);
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .artifact-size {
+            font-size: 11px;
+            color: var(--sax-text-dim);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(6, 8, 24, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--sax-card);
+            border: 1px solid var(--sax-border);
+            border-radius: 20px;
+            padding: 32px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.4s ease;
+            box-shadow: 0 20px 60px rgba(0, 212, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--sax-border);
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--sax-text-dim);
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--sax-danger);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--sax-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-label .required {
+            color: var(--sax-danger);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--sax-darker);
+            border: 1px solid var(--sax-border);
+            border-radius: 10px;
+            color: var(--sax-text);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--sax-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .file-upload-zone {
+            border: 2px dashed var(--sax-border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(0, 212, 255, 0.02);
+        }
+
+        .file-upload-zone:hover {
+            border-color: var(--sax-primary);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .file-upload-zone.dragover {
+            border-color: var(--sax-primary);
+            background: rgba(0, 212, 255, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: var(--gradient-accent);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .upload-text {
+            color: var(--sax-text);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            color: var(--sax-text-dim);
+            font-size: 13px;
+        }
+
+        .selected-files {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid var(--sax-border);
+            border-radius: 8px;
+        }
+
+        .selected-files-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--sax-text-dim);
+            margin-bottom: 12px;
+        }
+
+        .selected-file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--sax-border);
+        }
+
+        .selected-file-item:last-child {
+            border-bottom: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid var(--sax-border);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 16px 24px;
+            background: var(--gradient-accent);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+            transform: translateX(400px);
+            transition: transform 0.4s ease;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-icon {
+            font-size: 20px;
+        }
+
+        /* Loading State */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--sax-border);
+            border-top-color: var(--sax-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 24px;
+            }
+
+            .header-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-bar {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-mark">SAX</div>
+                    <div class="brand-text">
+                        <div class="brand-name">SAX Technology Advisors</div>
+                        <div class="brand-tagline">Enterprise Artifact Repository</div>
+                    </div>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="projectCount">0</div>
+                        <div class="stat-label">Active Projects</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="artifactCount">0</div>
+                        <div class="stat-label">Total Artifacts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="clientCount">0</div>
+                        <div class="stat-label">Client Partners</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero-section">
+            <h1 class="hero-title">SAXTech Artifact Repository</h1>
+            <p class="hero-subtitle">Enterprise-grade project management and artifact storage</p>
+        </section>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="openCreateProjectModal()">
+                <span class="btn-icon">+</span>
+                Create New Project
+            </button>
+            <button class="btn btn-secondary" onclick="openUploadModal()">
+                <span class="btn-icon">⬆</span>
+                Upload Artifacts
+            </button>
+            <button class="btn btn-secondary" onclick="refreshProjects()">
+                <span class="btn-icon">🔄</span>
+                Sync with Azure
+            </button>
+        </div>
+
+        <div class="search-filter-section">
+            <div class="search-row">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" placeholder="Search projects, clients, or artifacts..." id="searchInput">
+                </div>
+                <select class="filter-select" id="typeFilter">
+                    <option value="">All Project Types</option>
+                    <option value="ITIL Automation">ITIL Automation</option>
+                    <option value="Azure Migration">Azure Migration</option>
+                    <option value="AI Integration">AI Integration</option>
+                    <option value="Service Desk">Service Desk</option>
+                    <option value="Infrastructure">Infrastructure</option>
+                    <option value="ConnectWise PSA">ConnectWise PSA</option>
+                </select>
+                <select class="filter-select" id="clientFilter">
+                    <option value="">All Clients</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="projects-grid" id="projectsGrid">
+            <!-- Projects will be dynamically loaded here -->
+        </div>
+    </main>
+
+    <!-- Create Project Modal -->
+    <div id="createProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Initialize New Project</h2>
+                <button class="close-modal" onclick="closeModal('createProjectModal')">×</button>
+            </div>
+            <form id="createProjectForm">
+                <div class="form-group">
+                    <label class="form-label">Client Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="clientName" required placeholder="Enter client organization name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="projectName" required placeholder="Enter project identifier">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Type <span class="required">*</span></label>
+                    <select class="form-select" id="projectType" required>
+                        <option value="">Select project category</option>
+                        <option value="ITIL Automation">ITIL Automation</option>
+                        <option value="Azure Migration">Azure Migration</option>
+                        <option value="AI Integration">AI Integration</option>
+                        <option value="Service Desk">Service Desk</option>
+                        <option value="Infrastructure">Infrastructure</option>
+                        <option value="ConnectWise PSA">ConnectWise PSA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Description</label>
+                    <textarea class="form-textarea" id="projectDescription" placeholder="Provide project overview and objectives"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">GitHub Repository</label>
+                    <input type="url" class="form-input" id="githubUrl" placeholder="https://github.com/saxtech/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Azure Frontend URL</label>
+                    <input type="url" class="form-input" id="frontendUrl" placeholder="https://[project].azurewebsites.net">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createProjectModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Initialize Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Upload Project Artifacts</h2>
+                <button class="close-modal" onclick="closeModal('uploadModal')">×</button>
+            </div>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label class="form-label">Target Project <span class="required">*</span></label>
+                    <select class="form-select" id="uploadProject" required>
+                        <option value="">Select destination project</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Artifact Category <span class="required">*</span></label>
+                    <select class="form-select" id="artifactType" required>
+                        <option value="">Select artifact type</option>
+                        <option value="SOW">Statement of Work (SOW)</option>
+                        <option value="ROI">ROI Analysis</option>
+                        <option value="N8N">N8N Workflow (JSON)</option>
+                        <option value="ClientData">Client Data</option>
+                        <option value="Documentation">Technical Documentation</option>
+                        <option value="Architecture">Architecture Diagrams</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Files <span class="required">*</span></label>
+                    <div class="file-upload-zone" id="fileUploadArea">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Drop files here or click to browse</div>
+                        <div class="upload-subtext">Support for multiple files • Max 100MB per file</div>
+                        <input type="file" id="fileInput" multiple style="display: none;">
+                    </div>
+                    <div id="selectedFiles" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('uploadModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Upload to Azure</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <span class="toast-icon">✓</span>
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // Enhanced sample data
+        let projects = [
+            {
+                id: 1,
+                name: "ConnectWise PSA Integration Suite",
+                client: "Internal - SAXTech",
+                type: "ITIL Automation",
+                description: "Next-generation service desk automation leveraging Pia.AI for intelligent ticket routing and resolution",
+                github: "https://github.com/saxtech/connectwise-integration",
+                frontend: "https://saxtech-cw.azurewebsites.net",
+                artifacts: [
+                    { name: "SOW_ConnectWise_2024.pdf", type: "SOW", size: "2.4 MB", icon: "📋" },
+                    { name: "ROI_Analysis_Q1.xlsx", type: "ROI", size: "1.1 MB", icon: "📊" },
+                    { name: "automation_workflow.json", type: "N8N", size: "45 KB", icon: "⚙️" },
+                    { name: "Architecture_Diagram.pdf", type: "Architecture", size: "3.2 MB", icon: "🏗️" }
+                ],
+                created: new Date("2024-01-15"),
+                status: "active"
+            },
+            {
+                id: 2,
+                name: "Azure Cognitive Search Platform",
+                client: "TechCorp Solutions",
+                type: "AI Integration",
+                description: "Enterprise semantic search with vectorized indexing and Azure OpenAI integration",
+                github: "https://github.com/saxtech/azure-cognitive",
+                frontend: "https://techcorp-search.azurewebsites.net",
+                artifacts: [
+                    { name: "Requirements_v2.docx", type: "ClientData", size: "890 KB", icon: "📄" },
+                    { name: "search_index.json", type: "Documentation", size: "12 KB", icon: "🔍" },
+                    { name: "API_Documentation.pdf", type: "Documentation", size: "4.5 MB", icon: "📚" }
+                ],
+                created: new Date("2024-02-01"),
+                status: "active"
+            },
+            {
+                id: 3,
+                name: "Azure Infrastructure Migration",
+                client: "GlobalFinance Corp",
+                type: "Azure Migration",
+                description: "Complete Windows infrastructure migration to Azure with hybrid connectivity",
+                github: "https://github.com/saxtech/azure-migration",
+                frontend: "https://globalfinance.azurewebsites.net",
+                artifacts: [
+                    { name: "Migration_Plan.pdf", type: "SOW", size: "5.2 MB", icon: "📋" },
+                    { name: "Cost_Analysis.xlsx", type: "ROI", size: "2.8 MB", icon: "📊" },
+                    { name: "Network_Topology.vsdx", type: "Architecture", size: "8.1 MB", icon: "🏗️" }
+                ],
+                created: new Date("2024-03-10"),
+                status: "active"
+            }
+        ];
+
+        function updateStats() {
+            // Animate counter updates
+            animateCounter('projectCount', projects.length);
+            
+            let totalArtifacts = 0;
+            let uniqueClients = new Set();
+            
+            projects.forEach(project => {
+                totalArtifacts += project.artifacts.length;
+                uniqueClients.add(project.client);
+            });
+            
+            animateCounter('artifactCount', totalArtifacts);
+            animateCounter('clientCount', uniqueClients.size);
+            
+            // Update client filter
+            const clientFilter = document.getElementById('clientFilter');
+            clientFilter.innerHTML = '<option value="">All Clients</option>';
+            Array.from(uniqueClients).sort().forEach(client => {
+                clientFilter.innerHTML += `<option value="${client}">${client}</option>`;
+            });
+        }
+
+        function animateCounter(id, target) {
+            const element = document.getElementById(id);
+            const current = parseInt(element.textContent) || 0;
+            const increment = (target - current) / 20;
+            let value = current;
+            
+            const timer = setInterval(() => {
+                value += increment;
+                if ((increment > 0 && value >= target) || (increment < 0 && value <= target)) {
+                    element.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.round(value);
+                }
+            }, 50);
+        }
+
+        function renderProjects(projectList = projects) {
+            const grid = document.getElementById('projectsGrid');
+            
+            if (projectList.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                        <div style="color: var(--sax-text-dim);">No projects found matching your criteria</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = '';
+            
+            projectList.forEach((project, index) => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                card.innerHTML = `
+                    <div class="project-header">
+                        <div class="project-info">
+                            <div class="project-title">${project.name}</div>
+                            <div class="project-client">
+                                <span>🏢</span>
+                                ${project.client}
+                            </div>
+                        </div>
+                        <div class="project-badge">${project.type}</div>
+                    </div>
+                    <div class="project-description">${project.description}</div>
+                    <div class="project-links">
+                        ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
+                        ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
+                        <a href="#" class="link-btn" onclick="downloadProject(${project.id}); return false;"><span>⬇</span> Export</a>
+                    </div>
+                    <div class="project-artifacts">
+                        <div class="artifacts-header">Project Artifacts (${project.artifacts.length})</div>
+                        <div class="artifact-list">
+                            ${project.artifacts.map(artifact => `
+                                <div class="artifact-item">
+                                    <div class="artifact-info">
+                                        <div class="artifact-icon">${artifact.icon}</div>
+                                        <div class="artifact-name">${artifact.name}</div>
+                                    </div>
+                                    <div class="artifact-meta">
+                                        <span class="artifact-type">${artifact.type}</span>
+                                        <span class="artifact-size">${artifact.size}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function filterProjects() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const clientFilter = document.getElementById('clientFilter').value;
+            
+            const filtered = projects.filter(project => {
+                const matchesSearch = project.name.toLowerCase().includes(searchTerm) ||
+                                     project.client.toLowerCase().includes(searchTerm) ||
+                                     project.type.toLowerCase().includes(searchTerm) ||
+                                     project.description.toLowerCase().includes(searchTerm);
+                const matchesType = !typeFilter || project.type === typeFilter;
+                const matchesClient = !clientFilter || project.client === clientFilter;
+                
+                return matchesSearch && matchesType && matchesClient;
+            });
+            
+            renderProjects(filtered);
+        }
+
+        function openCreateProjectModal() {
+            document.getElementById('createProjectModal').classList.add('active');
+        }
+
+        function openUploadModal() {
+            const selectElement = document.getElementById('uploadProject');
+            selectElement.innerHTML = '<option value="">Select destination project</option>';
+            projects.forEach(project => {
+                selectElement.innerHTML += `<option value="${project.id}">${project.name} - ${project.client}</option>`;
+            });
+            document.getElementById('uploadModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            if (type === 'error') {
+                toast.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                toast.style.background = 'var(--gradient-accent)';
+            }
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function refreshProjects() {
+            const grid = document.getElementById('projectsGrid');
+            grid.innerHTML = '<div class="loading-spinner"></div>';
+            
+            setTimeout(() => {
+                renderProjects();
+                showToast('Successfully synchronized with Azure');
+            }, 1500);
+        }
+
+        function downloadProject(projectId) {
+            showToast(`Preparing project export...`);
+        }
+
+        // File upload handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+        
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+        
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            const selectedFilesDiv = document.getElementById('selectedFiles');
+            
+            if (files.length > 0) {
+                selectedFilesDiv.style.display = 'block';
+                selectedFilesDiv.className = 'selected-files';
+                selectedFilesDiv.innerHTML = '<div class="selected-files-title">Selected Files</div>';
+                
+                Array.from(files).forEach(file => {
+                    const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                    selectedFilesDiv.innerHTML += `
+                        <div class="selected-file-item">
+                            <span>📄 ${file.name}</span>
+                            <span style="color: var(--sax-text-dim);">${fileSize} MB</span>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Form submissions
+        document.getElementById('createProjectForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const newProject = {
+                id: projects.length + 1,
+                name: document.getElementById('projectName').value,
+                client: document.getElementById('clientName').value,
+                type: document.getElementById('projectType').value,
+                description: document.getElementById('projectDescription').value || "New project pending description",
+                github: document.getElementById('githubUrl').value,
+                frontend: document.getElementById('frontendUrl').value,
+                artifacts: [],
+                created: new Date(),
+                status: "active"
+            };
+            
+            projects.unshift(newProject);
+            updateStats();
+            renderProjects();
+            closeModal('createProjectModal');
+            showToast('Project initialized successfully');
+            document.getElementById('createProjectForm').reset();
+        });
+        
+        document.getElementById('uploadForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const projectId = parseInt(document.getElementById('uploadProject').value);
+            const artifactType = document.getElementById('artifactType').value;
+            const files = fileInput.files;
+            
+            if (files.length > 0) {
+                const project = projects.find(p => p.id === projectId);
+                if (project) {
+                    const iconMap = {
+                        'SOW': '📋',
+                        'ROI': '📊',
+                        'N8N': '⚙️',
+                        'ClientData': '📄',
+                        'Documentation': '📚',
+                        'Architecture': '🏗️',
+                        'Other': '📁'
+                    };
+                    
+                    Array.from(files).forEach(file => {
+                        project.artifacts.push({
+                            name: file.name,
+                            type: artifactType,
+                            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                            icon: iconMap[artifactType] || '📁'
+                        });
+                    });
+                    
+                    updateStats();
+                    renderProjects();
+                    closeModal('uploadModal');
+                    showToast(`${files.length} artifact(s) uploaded to Azure`);
+                    document.getElementById('uploadForm').reset();
+                    document.getElementById('selectedFiles').style.display = 'none';
+                    document.getElementById('selectedFiles').innerHTML = '';
+                }
+            }
+        });
+        
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', filterProjects);
+        document.getElementById('typeFilter').addEventListener('change', filterProjects);
+        document.getElementById('clientFilter').addEventListener('change', filterProjects);
+        
+        // Initialize
+        updateStats();
+        renderProjects();
+        
+        // Close modals on outside click
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'n') {
+                    e.preventDefault();
+                    openCreateProjectModal();
+                } else if (e.key === 'u') {
+                    e.preventDefault();
+                    openUploadModal();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
