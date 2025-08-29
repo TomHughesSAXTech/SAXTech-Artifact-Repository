@@ -844,14 +844,20 @@ async function fetchGPTUsage(bypassCache = false) {
             }
         }
         
-        // Calculate costs
+        // Calculate costs based on actual model pricing
         Object.keys(modelUsage).forEach(model => {
-            let costPer1K = 0.002;
-            if (model?.toLowerCase().includes('gpt-4')) {
-                costPer1K = 0.03;
-            } else if (model?.toLowerCase().includes('gpt-3.5')) {
-                costPer1K = 0.002;
-            } else if (model?.toLowerCase().includes('davinci')) {
+            let costPer1K = 0.002; // Default
+            const modelLower = model?.toLowerCase() || '';
+            
+            if (modelLower.includes('gpt-4o')) {
+                costPer1K = 0.005; // GPT-4o pricing
+            } else if (modelLower.includes('gpt-4')) {
+                costPer1K = 0.03; // GPT-4 pricing
+            } else if (modelLower.includes('gpt-3.5')) {
+                costPer1K = 0.002; // GPT-3.5 pricing
+            } else if (modelLower.includes('embedding') || modelLower.includes('ada')) {
+                costPer1K = 0.0001; // Embedding model pricing (much cheaper!)
+            } else if (modelLower.includes('davinci')) {
                 costPer1K = 0.02;
             }
             
