@@ -1014,6 +1014,8 @@
         }
     </style>
     <script src="blob-integration.js"></script>
+    <script src="azure-integration.js"></script>
+    <script src="n8n-integration.js"></script>
 </head>
 <body>
     <div class="noise-overlay"></div>
@@ -1068,10 +1070,6 @@
                 <button class="btn btn-secondary" onclick="openUploadModal()">
                     <span class="btn-icon">⬆</span>
                     Upload Artifacts
-                </button>
-                <button class="btn btn-secondary" onclick="refreshProjects()">
-                    <span class="btn-icon">🔄</span>
-                    Sync with Azure
                 </button>
             </div>
         </div>
@@ -1339,9 +1337,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Primary Azure Resource</label>
+                    <label class="form-label">Primary Azure Front-End</label>
                     <select class="form-select" id="frontendUrl">
-                        <option value="">Select Primary Resource</option>
+                        <option value="">Select Primary Front-End</option>
                     </select>
                 </div>
                 <div class="form-group" id="resourceCheckboxes" style="display: none;">
@@ -1437,9 +1435,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Primary Azure Resource</label>
+                    <label class="form-label">Primary Azure Front-End</label>
                     <select class="form-select" id="editFrontendUrl">
-                        <option value="">Select Primary Resource</option>
+                        <option value="">Select Primary Front-End</option>
                     </select>
                 </div>
                 <div class="form-group" id="editResourceCheckboxes" style="display: none;">
@@ -1593,6 +1591,7 @@
                     <div class="project-links">
                         ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
+                        ${project.n8nWorkflows && project.n8nWorkflows.main ? `<a href="#" class="link-btn" onclick="window.n8nIntegration.showWorkflowPreview('${project.n8nWorkflows.main}'); return false;"><span>⚙️</span> Workflow</a>` : ''}
                         <a href="#" class="link-btn" onclick="editProject(${project.id}); return false;"><span>✏️</span> Edit</a>
                         <a href="#" class="link-btn" onclick="deleteProject(${project.id}); return false;" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><span>🗑️</span> Delete</a>
                     </div>
@@ -1814,10 +1813,20 @@
                 const newProject = window.blobManager.createProject(projectData);
                 await window.blobManager.saveProjectsToBlob();
                 
+                // Sync N8N workflows if configured
+                if (window.n8nIntegration && (n8nMainUrl || n8nSubUrls.length > 0)) {
+                    const syncedWorkflows = await window.n8nIntegration.syncProjectWorkflows(newProject);
+                    if (syncedWorkflows && syncedWorkflows.length > 0) {
+                        showToast(`Project created and ${syncedWorkflows.length} N8N workflow(s) synced`);
+                    }
+                }
+                
                 updateStats();
                 renderProjects();
                 closeModal('createProjectModal');
-                showToast('Project initialized and saved to Azure');
+                if (!window.n8nIntegration || (!n8nMainUrl && n8nSubUrls.length === 0)) {
+                    showToast('Project initialized and saved to Azure');
+                }
                 document.getElementById('createProjectForm').reset();
             }
         });
@@ -1968,114 +1977,118 @@
         }
 
         // Azure Resource Management Functions
-        function loadResourceGroupResources() {
+        async function loadResourceGroupResources() {
             const resourceGroup = document.getElementById('resourceGroup').value;
             const primaryResourceSelect = document.getElementById('frontendUrl');
             const resourceCheckboxesDiv = document.getElementById('resourceCheckboxes');
             const resourceListDiv = document.getElementById('resourceList');
             
             if (!resourceGroup) {
-                primaryResourceSelect.innerHTML = '<option value="">Select Primary Resource</option>';
+                primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
                 resourceCheckboxesDiv.style.display = 'none';
                 return;
             }
             
-            // Simulate loading resources from Azure (in production, this would be an API call)
-            const mockResources = {
-                'rg-saxtech-prod': [
-                    { name: 'app-saxtech-portal', type: 'Web App', url: 'https://app-saxtech-portal.azurewebsites.net' },
-                    { name: 'func-saxtech-api', type: 'Function', url: 'https://func-saxtech-api.azurewebsites.net' },
-                    { name: 'st-saxtech-data', type: 'Storage', url: 'https://stsaxtechdata.blob.core.windows.net' },
-                    { name: 'cosmos-saxtech-db', type: 'CosmosDB', url: 'https://cosmos-saxtech-db.documents.azure.com' },
-                    { name: 'kv-saxtech-secrets', type: 'KeyVault', url: 'https://kv-saxtech-secrets.vault.azure.net' }
-                ],
-                'rg-saxtech-dev': [
-                    { name: 'app-saxtech-dev', type: 'Web App', url: 'https://app-saxtech-dev.azurewebsites.net' },
-                    { name: 'func-saxtech-dev-api', type: 'Function', url: 'https://func-saxtech-dev-api.azurewebsites.net' },
-                    { name: 'st-saxtech-dev', type: 'Storage', url: 'https://stsaxtechdev.blob.core.windows.net' }
-                ],
-                'rg-saxtech-staging': [
-                    { name: 'app-saxtech-staging', type: 'Web App', url: 'https://app-saxtech-staging.azurewebsites.net' },
-                    { name: 'func-saxtech-staging', type: 'Function', url: 'https://func-saxtech-staging.azurewebsites.net' }
-                ]
-            };
+            // Show loading state
+            primaryResourceSelect.innerHTML = '<option value="">Loading resources...</option>';
+            resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
             
-            const resources = mockResources[resourceGroup] || [];
-            
-            // Update primary resource dropdown
-            primaryResourceSelect.innerHTML = '<option value="">Select Primary Resource</option>';
-            resources.forEach(resource => {
-                primaryResourceSelect.innerHTML += `<option value="${resource.url}">${resource.name} (${resource.type})</option>`;
-            });
-            
-            // Update resource checkboxes
-            resourceCheckboxesDiv.style.display = 'block';
-            resourceListDiv.innerHTML = '';
-            resources.forEach((resource, index) => {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'resource-checkbox-item';
-                checkboxItem.innerHTML = `
-                    <input type="checkbox" id="resource-${index}" name="resources" value="${resource.name}">
-                    <label class="resource-checkbox-label" for="resource-${index}">${resource.name}</label>
-                    <span class="resource-type-badge">${resource.type}</span>
-                `;
-                resourceListDiv.appendChild(checkboxItem);
-            });
+            // Use Azure Integration to fetch real resources
+            if (window.azureIntegration && window.azureIntegration.initialized) {
+                const resources = await window.azureIntegration.fetchResourcesInGroup(resourceGroup);
+                
+                // Update primary resource dropdown
+                primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
+                
+                // Filter for front-end capable resources
+                const frontEndResources = resources.filter(r => 
+                    r.type === 'Web App' || r.type === 'Static Web App' || r.type === 'Function'
+                );
+                
+                frontEndResources.forEach(resource => {
+                    primaryResourceSelect.innerHTML += `<option value="${resource.url}">${resource.name} (${resource.type})</option>`;
+                });
+                
+                // Update resource checkboxes with all resources
+                resourceCheckboxesDiv.style.display = 'block';
+                resourceListDiv.innerHTML = '';
+                
+                if (resources.length === 0) {
+                    resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--sax-text-dim);">No resources found in this resource group</div>';
+                } else {
+                    resources.forEach((resource, index) => {
+                        const checkboxItem = document.createElement('div');
+                        checkboxItem.className = 'resource-checkbox-item';
+                        checkboxItem.innerHTML = `
+                            <input type="checkbox" id="resource-${index}" name="resources" value="${resource.id}" data-name="${resource.name}">
+                            <label class="resource-checkbox-label" for="resource-${index}">${resource.name}</label>
+                            <span class="resource-type-badge">${resource.type}</span>
+                        `;
+                        resourceListDiv.appendChild(checkboxItem);
+                    });
+                }
+            } else {
+                // Fallback if Azure integration not initialized
+                primaryResourceSelect.innerHTML = '<option value="">Azure integration not available</option>';
+                resourceCheckboxesDiv.style.display = 'none';
+            }
         }
         
-        function loadEditResourceGroupResources() {
+        async function loadEditResourceGroupResources() {
             const resourceGroup = document.getElementById('editResourceGroup').value;
             const primaryResourceSelect = document.getElementById('editFrontendUrl');
             const resourceCheckboxesDiv = document.getElementById('editResourceCheckboxes');
             const resourceListDiv = document.getElementById('editResourceList');
             
             if (!resourceGroup) {
-                primaryResourceSelect.innerHTML = '<option value="">Select Primary Resource</option>';
+                primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
                 resourceCheckboxesDiv.style.display = 'none';
                 return;
             }
             
-            // Simulate loading resources from Azure (in production, this would be an API call)
-            const mockResources = {
-                'rg-saxtech-prod': [
-                    { name: 'app-saxtech-portal', type: 'Web App', url: 'https://app-saxtech-portal.azurewebsites.net' },
-                    { name: 'func-saxtech-api', type: 'Function', url: 'https://func-saxtech-api.azurewebsites.net' },
-                    { name: 'st-saxtech-data', type: 'Storage', url: 'https://stsaxtechdata.blob.core.windows.net' },
-                    { name: 'cosmos-saxtech-db', type: 'CosmosDB', url: 'https://cosmos-saxtech-db.documents.azure.com' },
-                    { name: 'kv-saxtech-secrets', type: 'KeyVault', url: 'https://kv-saxtech-secrets.vault.azure.net' }
-                ],
-                'rg-saxtech-dev': [
-                    { name: 'app-saxtech-dev', type: 'Web App', url: 'https://app-saxtech-dev.azurewebsites.net' },
-                    { name: 'func-saxtech-dev-api', type: 'Function', url: 'https://func-saxtech-dev-api.azurewebsites.net' },
-                    { name: 'st-saxtech-dev', type: 'Storage', url: 'https://stsaxtechdev.blob.core.windows.net' }
-                ],
-                'rg-saxtech-staging': [
-                    { name: 'app-saxtech-staging', type: 'Web App', url: 'https://app-saxtech-staging.azurewebsites.net' },
-                    { name: 'func-saxtech-staging', type: 'Function', url: 'https://func-saxtech-staging.azurewebsites.net' }
-                ]
-            };
+            // Show loading state
+            primaryResourceSelect.innerHTML = '<option value="">Loading resources...</option>';
+            resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
             
-            const resources = mockResources[resourceGroup] || [];
-            
-            // Update primary resource dropdown
-            primaryResourceSelect.innerHTML = '<option value="">Select Primary Resource</option>';
-            resources.forEach(resource => {
-                primaryResourceSelect.innerHTML += `<option value="${resource.url}">${resource.name} (${resource.type})</option>`;
-            });
-            
-            // Update resource checkboxes
-            resourceCheckboxesDiv.style.display = 'block';
-            resourceListDiv.innerHTML = '';
-            resources.forEach((resource, index) => {
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'resource-checkbox-item';
-                checkboxItem.innerHTML = `
-                    <input type="checkbox" id="edit-resource-${index}" name="edit-resources" value="${resource.name}">
-                    <label class="resource-checkbox-label" for="edit-resource-${index}">${resource.name}</label>
-                    <span class="resource-type-badge">${resource.type}</span>
-                `;
-                resourceListDiv.appendChild(checkboxItem);
-            });
+            // Use Azure Integration to fetch real resources
+            if (window.azureIntegration && window.azureIntegration.initialized) {
+                const resources = await window.azureIntegration.fetchResourcesInGroup(resourceGroup);
+                
+                // Update primary resource dropdown
+                primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
+                
+                // Filter for front-end capable resources
+                const frontEndResources = resources.filter(r => 
+                    r.type === 'Web App' || r.type === 'Static Web App' || r.type === 'Function'
+                );
+                
+                frontEndResources.forEach(resource => {
+                    primaryResourceSelect.innerHTML += `<option value="${resource.url}">${resource.name} (${resource.type})</option>`;
+                });
+                
+                // Update resource checkboxes with all resources
+                resourceCheckboxesDiv.style.display = 'block';
+                resourceListDiv.innerHTML = '';
+                
+                if (resources.length === 0) {
+                    resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--sax-text-dim);">No resources found in this resource group</div>';
+                } else {
+                    resources.forEach((resource, index) => {
+                        const checkboxItem = document.createElement('div');
+                        checkboxItem.className = 'resource-checkbox-item';
+                        checkboxItem.innerHTML = `
+                            <input type="checkbox" id="edit-resource-${index}" name="edit-resources" value="${resource.id}" data-name="${resource.name}">
+                            <label class="resource-checkbox-label" for="edit-resource-${index}">${resource.name}</label>
+                            <span class="resource-type-badge">${resource.type}</span>
+                        `;
+                        resourceListDiv.appendChild(checkboxItem);
+                    });
+                }
+            } else {
+                // Fallback if Azure integration not initialized
+                primaryResourceSelect.innerHTML = '<option value="">Azure integration not available</option>';
+                resourceCheckboxesDiv.style.display = 'none';
+            }
         }
         
         // N8N Workflow Sync function
