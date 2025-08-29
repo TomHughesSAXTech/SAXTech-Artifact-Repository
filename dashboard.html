@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Automation & AI Hub | Live Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="chart.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="chart.min.js?v=2"></script>
+  <script src="chartjs-plugin-datalabels.min.js?v=2"></script>
   <style>
     :root {
       --bg: #060818; --card: #0f1729; --text: #e2e8f0; --muted: #94a3b8;
@@ -93,7 +93,7 @@
       </div>
       <div class="card span-3">
         <div class="stat"><div class="label">Daily Cost (Yesterday)</div><div id="cost_daily" class="value clickable" onclick="showCostBreakdown('daily')">$0</div></div>
-        <div class="note">UTC timezone</div>
+        <div class="note">EST timezone</div>
       </div>
       <div class="card span-3">
         <div class="stat"><div class="label">Static Web Apps</div><div id="count_swa" class="value clickable" onclick="showResourceBreakdown('staticSites')">0</div></div>
@@ -326,12 +326,24 @@
           
           // Use real data from API
           for (const dayData of sortedData) {
-            const dateStr = dayData.date.toString();
-            // Parse date properly handling different formats
-            const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-            dates.push(date);
-            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-            data.push(dayData.cost);
+            // Handle Azure date format (YYYYMMDD as number)
+            let date;
+            if (typeof dayData.date === 'number') {
+              const dateStr = dayData.date.toString();
+              const year = dateStr.substring(0, 4);
+              const month = dateStr.substring(4, 6);
+              const day = dateStr.substring(6, 8);
+              date = new Date(year + '-' + month + '-' + day + 'T00:00:00');
+            } else {
+              const dateStr = dayData.date.toString();
+              date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+            }
+            
+            if (!isNaN(date.getTime())) {
+              dates.push(date);
+              labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }));
+              data.push(dayData.cost);
+            }
           }
         } else {
           // Fallback if no data available

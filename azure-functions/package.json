@@ -8,11 +8,13 @@
     "watch": "tsc -w"
   },
   "dependencies": {
+    "@azure/arm-appinsights": "5.0.0-beta.8",
     "@azure/arm-costmanagement": "1.0.0-beta.2",
     "@azure/arm-resourcegraph": "^4.2.0",
     "@azure/arm-storage": "^18.0.0",
     "@azure/identity": "^4.0.0",
-    "@azure/storage-blob": "^12.0.0"
+    "@azure/storage-blob": "^12.0.0",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@azure/functions": "^4.0.0",
