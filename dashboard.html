@@ -290,31 +290,33 @@
     async function refreshAll(){
       try{
         const data = await fetchMetrics();
+        console.log('Fetched metrics data:', data);
         metricsData = data; // Store for use in charts
         
         // costs - Check if costs data exists, otherwise show placeholder
-        if (data.costs) {
+        if (data && data.costs) {
           document.getElementById('cost_mtd').textContent = dollars(data.costs.monthToDate||0);
           document.getElementById('cost_daily').textContent = dollars(data.costs.yesterday||0);
           document.getElementById('azure_cost_pill').textContent = dollars(data.costs.monthToDate||0);
           document.getElementById('azure_cost_pill').dataset.val = String(data.costs.monthToDate||0);
         } else {
           // Show placeholder text when cost data is not available
-          document.getElementById('cost_mtd').textContent = 'Loading...';
-          document.getElementById('cost_daily').textContent = 'Loading...';
-          document.getElementById('azure_cost_pill').textContent = 'N/A';
+          document.getElementById('cost_mtd').textContent = '$0.00';
+          document.getElementById('cost_daily').textContent = '$0.00';
+          document.getElementById('azure_cost_pill').textContent = '$0.00';
           document.getElementById('azure_cost_pill').dataset.val = '0';
+          console.warn('No cost data in response');
         }
         
         // counts - Use actual data from API response
-        document.getElementById('count_swa').textContent = data.resources?.staticSites || data.resourceCounts?.staticWebApps || 0;
-        document.getElementById('count_func').textContent = data.resources?.functionApps || data.resourceCounts?.functionApps || 0;
-        document.getElementById('count_sa').textContent = data.resources?.storageAccounts || data.resourceCounts?.storageAccounts || 0;
+        document.getElementById('count_swa').textContent = data?.resources?.staticSites || data?.resourceCounts?.staticWebApps || 0;
+        document.getElementById('count_func').textContent = data?.resources?.functionApps || data?.resourceCounts?.functionApps || 0;
+        document.getElementById('count_sa').textContent = data?.resources?.storageAccounts || data?.resourceCounts?.storageAccounts || 0;
         // storage list
         const list = document.getElementById('storage_list');
         list.innerHTML = '';
         let totalUsed = 0;
-        for(const s of (data.storage?.accounts||[])){
+        for(const s of (data?.storage?.accounts||[])){
           totalUsed += s.usedBytes||0;
           const div = document.createElement('div');
           div.className = 'kpi';

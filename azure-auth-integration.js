@@ -115,6 +115,7 @@ class AzureAuthIntegration {
     // Get Azure metrics using the backend function
     async getAzureMetrics() {
         try {
+            console.log('Fetching metrics from:', 'https://saxtech-metrics-api.azurewebsites.net/api/metrics');
             // Use the standalone Azure Function endpoint
             const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics', {
                 method: 'GET',
@@ -124,8 +125,13 @@ class AzureAuthIntegration {
                 mode: 'cors'
             });
             
+            console.log('Response status:', response.status);
+            
             if (response.ok) {
                 const data = await response.json();
+                console.log('API Response keys:', Object.keys(data));
+                console.log('Costs data:', data.costs ? 'Present' : 'Missing');
+                console.log('Storage data:', data.storage ? 'Present' : 'Missing');
                 
                 // Transform the API response to match our expected format
                 return {
@@ -162,13 +168,16 @@ class AzureAuthIntegration {
                 };
             } else {
                 console.error('Failed to fetch Azure metrics:', response.status);
-                // Return mock data as fallback
-                return this.getMockMetrics();
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                // DON'T return mock data - return empty object to show real issue
+                return {};
             }
         } catch (error) {
             console.error('Error fetching Azure metrics:', error);
-            // Return mock data as fallback
-            return this.getMockMetrics();
+            console.error('Error details:', error.message, error.stack);
+            // DON'T return mock data - return empty object to show real issue  
+            return {};
         }
     }
     
