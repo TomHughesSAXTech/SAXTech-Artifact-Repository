@@ -11,6 +11,13 @@ class AzureAuthIntegration {
             // Get user info from Static Web App auth endpoint
             const authResponse = await fetch('/.auth/me');
             
+            // Check if response is JSON
+            const contentType = authResponse.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.log('Auth endpoint returned non-JSON response, user not authenticated');
+                return false;
+            }
+            
             if (authResponse.ok) {
                 const authData = await authResponse.json();
                 

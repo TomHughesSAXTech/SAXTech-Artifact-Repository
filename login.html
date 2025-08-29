@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAXTech - Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060818;
+            --card: #0f1729;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --primary: #00d4ff;
+            --accent: #7c3aed;
+            --border: rgba(0,212,255,0.15);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0,212,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(124,58,237,0.1) 0%, transparent 50%);
+        }
+        
+        .login-container {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px;
+            max-width: 440px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 40px;
+        }
+        
+        .login-button {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 24px;
+        }
+        
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,212,255,0.3);
+        }
+        
+        .login-button:active {
+            transform: translateY(0);
+        }
+        
+        .info {
+            background: rgba(0,212,255,0.1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        .info-text {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 32px;
+        }
+        
+        .feature {
+            padding: 16px;
+            background: rgba(124,58,237,0.1);
+            border: 1px solid rgba(124,58,237,0.3);
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .feature-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .feature-desc {
+            font-size: 12px;
+            color: var(--muted);
+        }
+        
+        .loading {
+            display: none;
+            color: var(--muted);
+            font-size: 14px;
+            margin-top: 16px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .back-link {
+            color: var(--muted);
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .back-link:hover {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">SAXTech</div>
+        <div class="title">Welcome to the Automation Hub</div>
+        <div class="subtitle">Sign in with your Microsoft account to continue</div>
+        
+        <div class="info">
+            <div class="info-title">🔐 Secure Authentication</div>
+            <div class="info-text">
+                Your credentials are handled securely by Microsoft Azure Active Directory. 
+                We never store or see your password.
+            </div>
+        </div>
+        
+        <button class="login-button" onclick="login()">
+            Sign in with Microsoft
+        </button>
+        
+        <div class="loading" id="loading">
+            <span class="spinner"></span>
+            Redirecting to Microsoft login...
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Live Dashboard</div>
+                <div class="feature-desc">Real-time Azure metrics</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🚀</div>
+                <div class="feature-title">AI Integration</div>
+                <div class="feature-desc">GPT & Claude AI tools</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚙️</div>
+                <div class="feature-title">N8N Workflows</div>
+                <div class="feature-desc">Automation pipelines</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">☁️</div>
+                <div class="feature-title">Azure Storage</div>
+                <div class="feature-desc">Secure blob storage</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 32px;">
+            <a href="index.html" class="back-link">← Back to homepage</a>
+        </div>
+    </div>
+    
+    <script>
+        function login() {
+            document.getElementById('loading').classList.add('active');
+            // Redirect to Azure AD login
+            window.location.href = '/.auth/login/aad';
+        }
+        
+        // Check if already authenticated
+        async function checkAuth() {
+            try {
+                const response = await fetch('/.auth/me');
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data && data.length > 0 && data[0]) {
+                        // User is already authenticated, redirect to main page
+                        window.location.href = 'index.html';
+                    }
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+        
+        // Check auth status on page load
+        checkAuth();
+    </script>
+</body>
+</html>
