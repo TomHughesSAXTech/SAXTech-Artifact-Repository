@@ -7,12 +7,24 @@ const { ContainerServiceClient } = require('@azure/arm-containerservice');
 module.exports = async function (context, req) {
     context.log('GetAzureMetrics function triggered');
     
-    // Add CORS headers
+    // Add CORS headers - support both domains
+    const origin = context.req.headers.origin || context.req.headers.referer || '*';
+    const allowedOrigins = [
+        'https://repository.saxtechnology.com',
+        'https://saxtechnology.com',
+        'https://kind-ocean-0373f2a0f.1.azurestaticapps.net',
+        'http://localhost:3000',
+        'http://localhost:8080'
+    ];
+    
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+    
     const headers = {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-ms-client-principal'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-ms-client-principal',
+        'Access-Control-Allow-Credentials': 'true'
     };
 
     // Handle OPTIONS request for CORS

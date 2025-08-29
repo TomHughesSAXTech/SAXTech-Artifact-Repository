@@ -49,7 +49,7 @@
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "default-src 'self' https://*.blob.core.windows.net https://*.azurestaticapps.net https://login.microsoftonline.com https://graph.microsoft.com https://*.azurewebsites.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://alcdn.msauth.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.blob.core.windows.net; connect-src 'self' https://*.blob.core.windows.net https://*.azurestaticapps.net https://login.microsoftonline.com https://graph.microsoft.com https://*.azurewebsites.net https://saxtech-metrics-api.azurewebsites.net",
+    "Content-Security-Policy": "default-src 'self' https://*.saxtechnology.com https://*.blob.core.windows.net https://*.azurestaticapps.net https://login.microsoftonline.com https://graph.microsoft.com https://*.azurewebsites.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://alcdn.msauth.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.blob.core.windows.net; connect-src 'self' https://*.saxtechnology.com https://*.blob.core.windows.net https://*.azurestaticapps.net https://login.microsoftonline.com https://graph.microsoft.com https://*.azurewebsites.net https://saxtech-metrics-api.azurewebsites.net wss://*.azurestaticapps.net",
     "Referrer-Policy": "no-referrer-when-downgrade"
   }
 }
