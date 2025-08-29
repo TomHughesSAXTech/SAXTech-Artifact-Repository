@@ -1156,7 +1156,7 @@
                 </div>
 
                 <!-- Backup Status -->
-                <div class="status-card">
+                <div class="status-card" onclick="window.location.href='dashboard.html#backup'" style="cursor: pointer;">
                     <div class="status-header">
                         <span class="status-icon">💾</span>
                         <span class="status-title">Backup Status</span>
@@ -2002,31 +2002,64 @@
                         azureStatusBadge.className = 'status-badge healthy';
                     }
                     
-                    // Kubernetes data (currently no K8s clusters in use)
-                    document.getElementById('aksCount').textContent = '0';
-                    document.getElementById('k8sNodes').textContent = '0';
-                    document.getElementById('k8sCpu').textContent = 'N/A';
-                    document.getElementById('k8sMemory').textContent = 'N/A';
-                    
-                    const k8sStatusBadge = document.getElementById('k8sStatusBadge');
-                    k8sStatusBadge.textContent = 'No Clusters';
-                    k8sStatusBadge.className = 'status-badge';
-                    
-                    // Backup data (storage account based)
-                    const storageAccounts = data.storage?.accounts || [];
-                    const backupStorageAccount = storageAccounts.find(s => s.name === 'saxtechn8nbackups');
-                    document.getElementById('vaultCount').textContent = backupStorageAccount ? '1' : '0';
-                    document.getElementById('protectedItems').textContent = storageAccounts.length.toString();
-                    document.getElementById('lastBackup').textContent = 'Daily';
-                    document.getElementById('backupHealth').textContent = backupStorageAccount ? 'Healthy' : 'Unknown';
-                    
-                    const backupStatusBadge = document.getElementById('backupStatusBadge');
-                    if (backupStorageAccount) {
-                        backupStatusBadge.textContent = 'Protected';
-                        backupStatusBadge.className = 'status-badge success';
+                    // Kubernetes data from API
+                    if (data.kubernetes) {
+                        document.getElementById('aksCount').textContent = data.kubernetes.clusterCount || '0';
+                        document.getElementById('k8sNodes').textContent = data.kubernetes.totalNodes || '0';
+                        document.getElementById('k8sCpu').textContent = data.kubernetes.avgCpuUsage ? `${data.kubernetes.avgCpuUsage}%` : 'N/A';
+                        document.getElementById('k8sMemory').textContent = data.kubernetes.avgMemoryUsage ? `${data.kubernetes.avgMemoryUsage}%` : 'N/A';
+                        
+                        const k8sStatusBadge = document.getElementById('k8sStatusBadge');
+                        if (data.kubernetes.clusterCount > 0) {
+                            k8sStatusBadge.textContent = 'Active';
+                            k8sStatusBadge.className = 'status-badge healthy';
+                        } else {
+                            k8sStatusBadge.textContent = 'No Clusters';
+                            k8sStatusBadge.className = 'status-badge';
+                        }
                     } else {
-                        backupStatusBadge.textContent = 'Check Required';
-                        backupStatusBadge.className = 'status-badge warning';
+                        document.getElementById('aksCount').textContent = '0';
+                        document.getElementById('k8sNodes').textContent = '0';
+                        document.getElementById('k8sCpu').textContent = 'N/A';
+                        document.getElementById('k8sMemory').textContent = 'N/A';
+                        
+                        const k8sStatusBadge = document.getElementById('k8sStatusBadge');
+                        k8sStatusBadge.textContent = 'No Clusters';
+                        k8sStatusBadge.className = 'status-badge';
+                    }
+                    
+                    // Backup data from API
+                    if (data.backupStatus) {
+                        document.getElementById('vaultCount').textContent = data.backupStatus.summary.totalVaults || '0';
+                        document.getElementById('protectedItems').textContent = data.backupStatus.summary.totalProtectedItems || '0';
+                        document.getElementById('lastBackup').textContent = 'Daily';
+                        document.getElementById('backupHealth').textContent = data.backupStatus.summary.status || 'Unknown';
+                        
+                        const backupStatusBadge = document.getElementById('backupStatusBadge');
+                        if (data.backupStatus.summary.status === 'Configured') {
+                            backupStatusBadge.textContent = 'Protected';
+                            backupStatusBadge.className = 'status-badge success';
+                        } else {
+                            backupStatusBadge.textContent = 'Check Required';
+                            backupStatusBadge.className = 'status-badge warning';
+                        }
+                    } else {
+                        // Fallback to storage account based
+                        const storageAccounts = data.storage?.accounts || [];
+                        const backupStorageAccount = storageAccounts.find(s => s.name === 'saxtechn8nbackups');
+                        document.getElementById('vaultCount').textContent = backupStorageAccount ? '1' : '0';
+                        document.getElementById('protectedItems').textContent = storageAccounts.length.toString();
+                        document.getElementById('lastBackup').textContent = 'Daily';
+                        document.getElementById('backupHealth').textContent = backupStorageAccount ? 'Healthy' : 'Unknown';
+                        
+                        const backupStatusBadge = document.getElementById('backupStatusBadge');
+                        if (backupStorageAccount) {
+                            backupStatusBadge.textContent = 'Protected';
+                            backupStatusBadge.className = 'status-badge success';
+                        } else {
+                            backupStatusBadge.textContent = 'Check Required';
+                            backupStatusBadge.className = 'status-badge warning';
+                        }
                     }
                     
                     // Service health
