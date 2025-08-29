@@ -1,5 +1,4 @@
 const { DefaultAzureCredential } = require("@azure/identity");
-const { SecretClient } = require("@azure/keyvault-secrets");
 
 module.exports = async function (context, req) {
     context.log('Getting Azure management token');
@@ -11,8 +10,8 @@ module.exports = async function (context, req) {
         // Get the access token for Azure Management API
         const tokenResponse = await credential.getToken("https://management.azure.com/.default");
         
-        // Get subscription ID from environment variable or Key Vault
-        const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+        // Get subscription ID from environment variable
+        const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID || "3cfb259a-f02a-484e-9ce3-d83c21fd0ddb";
         
         context.res = {
             status: 200,
@@ -20,6 +19,10 @@ module.exports = async function (context, req) {
                 accessToken: tokenResponse.token,
                 subscriptionId: subscriptionId,
                 expiresOn: tokenResponse.expiresOnTimestamp
+            },
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
             }
         };
     } catch (error) {
@@ -27,7 +30,12 @@ module.exports = async function (context, req) {
         context.res = {
             status: 500,
             body: {
-                error: 'Failed to authenticate with Azure'
+                error: 'Failed to authenticate with Azure',
+                details: error.message
+            },
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
             }
         };
     }

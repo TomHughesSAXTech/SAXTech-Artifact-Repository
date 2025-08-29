@@ -31,7 +31,7 @@ class AzureIntegration {
         try {
             // Call your backend API to get Azure management token
             // Use the deployed Function App URL
-            const functionUrl = 'https://saxtech-metrics-api.azurewebsites.net/api/GetAzureToken';
+            const functionUrl = 'https://saxtech-metrics-api.azurewebsites.net/api/getazuretoken';
             const response = await fetch(functionUrl);
             if (response.ok) {
                 const data = await response.json();
