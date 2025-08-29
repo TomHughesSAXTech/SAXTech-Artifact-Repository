@@ -327,10 +327,25 @@
           console.warn('No cost data in response');
         }
         
-        // counts - Use actual data from API response
-        document.getElementById('count_swa').textContent = data?.resources?.staticSites || data?.resourceCounts?.staticWebApps || 6;
-        document.getElementById('count_func').textContent = data?.resources?.functionApps || data?.resourceCounts?.functionApps || 5;
-        document.getElementById('count_sa').textContent = data?.resources?.storageAccounts || data?.resourceCounts?.storageAccounts || 5;
+        // counts - Use actual data from API response, NO FALLBACK
+        if (data?.resources) {
+          document.getElementById('count_swa').textContent = data.resources.staticSites || 0;
+          document.getElementById('count_func').textContent = data.resources.functionApps || 0;
+          document.getElementById('count_sa').textContent = data.resources.storageAccounts || 0;
+        } else if (data?.errors) {
+          // Show error state
+          document.getElementById('count_swa').textContent = 'Error';
+          document.getElementById('count_func').textContent = 'Error';
+          document.getElementById('count_sa').textContent = 'Error';
+          document.getElementById('count_swa').style.color = '#ef4444';
+          document.getElementById('count_func').style.color = '#ef4444';
+          document.getElementById('count_sa').style.color = '#ef4444';
+        } else {
+          // No data
+          document.getElementById('count_swa').textContent = '0';
+          document.getElementById('count_func').textContent = '0';
+          document.getElementById('count_sa').textContent = '0';
+        }
         // storage list
         const list = document.getElementById('storage_list');
         list.innerHTML = '';
