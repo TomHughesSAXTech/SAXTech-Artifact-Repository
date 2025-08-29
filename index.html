@@ -2102,14 +2102,14 @@
                         document.getElementById('userEmail').title = 'Authenticated User';
                     }
                 } else {
-                    // User is not authenticated - redirect to login
-                    console.log('User not authenticated, redirecting to login...');
-                    window.location.href = '/login.html';
+                    // User is not authenticated - Azure Static Web Apps will handle redirect
+                    console.log('User not authenticated');
+                    document.getElementById('userEmail').textContent = 'Not authenticated';
                 }
             } catch (error) {
                 console.error('Error checking authentication:', error);
-                // In case of error, redirect to login for safety
-                window.location.href = '/login.html';
+                // Don't redirect on error, let Azure Static Web Apps handle it
+                document.getElementById('userEmail').textContent = 'Auth check failed';
             }
         }
         

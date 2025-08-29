@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "route": "/login.html",
+      "allowedRoles": ["anonymous"]
+    },
+    {
       "route": "/.auth/login/aad",
       "allowedRoles": ["anonymous"]
     },
@@ -17,13 +21,21 @@
       "allowedRoles": ["authenticated", "anonymous"]
     },
     {
+      "route": "/index.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/dashboard.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
       "route": "/*",
-      "allowedRoles": ["authenticated", "anonymous"]
+      "allowedRoles": ["authenticated"]
     }
   ],
   "responseOverrides": {
     "401": {
-      "redirect": "/.auth/login/aad",
+      "redirect": "/login.html",
       "statusCode": 302
     }
   },

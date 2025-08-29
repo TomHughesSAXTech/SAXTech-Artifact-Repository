@@ -234,8 +234,8 @@
     <script>
         function login() {
             document.getElementById('loading').classList.add('active');
-            // Redirect to Azure AD login
-            window.location.href = '/.auth/login/aad';
+            // Redirect to Azure AD login with explicit return URL
+            window.location.href = '/.auth/login/aad?post_login_redirect_uri=/index.html';
         }
         
         // Check if already authenticated
