@@ -1,0 +1,17 @@
+<step title="Incoming Request" date="2025-08-29T01:42:12.967" instance="de47ee" url="/api/zipdeploy?isAsync=true&amp;Deployer=az_cli_functions" method="POST" type="request" pid="5808,2,7" Cache-Control="no-cache" Connection="Keep-Alive" Content-Length="19831" Content-Type="application/octet-stream" Accept="*/*" Accept-Encoding="gzip, deflate" Authorization="Bas..." Host="saxtech-metrics-api.scm.azurewebsites.net" User-Agent="AZURECLI/2.75.0 (HOMEBREW)" x-ms-client-request-id="5b40b672-8479-11f0-a31e-cee493d8ca02" X-ARR-LOG-ID="5b40b672-8479-11f0-a31e-cee493d8ca02" CLIENT-IP="71.217.130.52:53634" X-SITE-DEPLOYMENT-ID="saxtech-metrics-api" WAS-DEFAULT-HOSTNAME="saxtech-metrics-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/zipdeploy?isAsync=true&amp;Deployer=az_cli_functions" X-MS-COLDSTART="1" >
+  <step title="ZipPushDeploy" date="2025-08-29T01:42:13.514" >
+    <step title="Functions App ZipDeploy. Extract zip. " date="2025-08-29T01:42:13.546" /><!-- duration: 31ms -->
+    <step title="Starting PushDeployAsync" date="2025-08-29T01:42:13.608" /><!-- duration: 31ms -->
+    <step title="Updating shutdown sentinel last write time" date="2025-08-29T01:42:13.796" SemaphoreCount="7" /><!-- duration: 15ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; acquired" date="2025-08-29T01:42:13.827" /><!-- duration: 16ms -->
+    <step title="Saving request content to C:\local\Temp\zipdeploy\prfunfxg.zip" date="2025-08-29T01:42:13.874" >
+      <step title="Total 19,831 bytes written to C:\local\Temp\zipdeploy\prfunfxg.zip" date="2025-08-29T01:42:13.905" /><!-- duration: 16ms -->
+    </step><!-- duration: 62ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; released" date="2025-08-29T01:42:13.968" /><!-- duration: 16ms -->
+    <step title="Deleting shutdown sentinel file" date="2025-08-29T01:42:14.014" SemaphoreCount="8" /><!-- duration: 16ms -->
+    <step title="Starting FetchDeploy" date="2025-08-29T01:42:14.061" /><!-- duration: 31ms -->
+    <step title="Start deployment in the background" date="2025-08-29T01:42:14.108" /><!-- duration: 578ms -->
+>
+    <step title="Starting LocalZipFetch" date="2025-08-29T01:42:14.686" /><!-- duration: 31ms -->
+  <step title="Outgoing response" date="2025-08-29T01:42:14.733" type="response" statusCode="202" statusText="Accepted" Server="Microsoft-IIS/10.0" x-ms-request-id="5b40b672-8479-11f0-a31e-cee493d8ca02" Retry-After="30" Cache-Control="private" X-AspNet-Version="4.0.30319" Location="https://saxtech-metrics-api.scm.azurewebsites.net/api/deployments/latest?deployer=az_cli_functions&amp;time=2025-08-29_01-42-14Z" /><!-- duration: 16ms -->
+</step><!-- duration: 1798ms -->
