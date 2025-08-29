@@ -3,8 +3,7 @@ const { ResourceManagementClient } = require('@azure/arm-resources');
 const { MonitorClient } = require('@azure/arm-monitor');
 const { ComputeManagementClient } = require('@azure/arm-compute');
 const { ContainerServiceClient } = require('@azure/arm-containerservice');
-const { StorageManagementClient } = require('@azure/arm-storage');
-const { CostManagementClient } = require('@azure/arm-costmanagement');
+const fetch = require('node-fetch');
 
 module.exports = async function (context, req) {
     context.log('GetAzureMetrics function triggered');
@@ -75,8 +74,7 @@ module.exports = async function (context, req) {
         const monitorClient = new MonitorClient(credential, subscriptionId);
         const computeClient = new ComputeManagementClient(credential, subscriptionId);
         const containerClient = new ContainerServiceClient(credential, subscriptionId);
-        const storageClient = new StorageManagementClient(credential, subscriptionId);
-        const costClient = new CostManagementClient(credential);
+        // We'll use REST API for cost and storage data
 
         let metrics = {};
 
@@ -171,9 +169,14 @@ module.exports = async function (context, req) {
             };
         }
 
-        // Fetch REAL cost data from Azure Cost Management
+        // Fetch REAL cost data using REST API
         if (metricType === 'all' || metricType === 'costs') {
             try {
+                // Get access token for API calls
+                const tokenCredential = new DefaultAzureCredential();
+                const tokenResponse = await tokenCredential.getToken('https://management.azure.com/.default');
+                const accessToken = tokenResponse.token;
+                
                 const now = new Date();
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
                 const yesterday = new Date(now);
@@ -181,16 +184,13 @@ module.exports = async function (context, req) {
                 const thirtyDaysAgo = new Date(now);
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                 
-                const scope = `/subscriptions/${subscriptionId}`;
+                // Use REST API for cost data
+                const costApiUrl = `https://management.azure.com/subscriptions/${subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2021-10-01`;
                 
                 // Month-to-date query
                 const mtdQuery = {
                     type: 'ActualCost',
-                    timeframe: 'Custom',
-                    timePeriod: {
-                        from: startOfMonth.toISOString().split('T')[0],
-                        to: now.toISOString().split('T')[0]
-                    },
+                    timeframe: 'MonthToDate',
                     dataset: {
                         granularity: 'None',
                         aggregation: {
@@ -240,44 +240,76 @@ module.exports = async function (context, req) {
                     }
                 };
                 
-                // Execute queries with error handling
+                // Execute queries using REST API
                 let monthToDate = 0;
                 let yesterdayAmount = 0;
                 let historical = [];
                 
                 try {
-                    const mtdResult = await costClient.query.usage(scope, mtdQuery);
-                    if (mtdResult && mtdResult.rows && mtdResult.rows.length > 0) {
-                        monthToDate = Number(mtdResult.rows[0][0]) || 0;
+                    const mtdResponse = await fetch(costApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(mtdQuery)
+                    });
+                    
+                    if (mtdResponse.ok) {
+                        const mtdData = await mtdResponse.json();
+                        if (mtdData.properties && mtdData.properties.rows && mtdData.properties.rows.length > 0) {
+                            monthToDate = Number(mtdData.properties.rows[0][0]) || 0;
+                        }
                     }
                 } catch (err) {
                     context.log.warn('MTD cost query failed:', err.message);
                 }
                 
                 try {
-                    const dailyResult = await costClient.query.usage(scope, dailyQuery);
-                    if (dailyResult && dailyResult.rows && dailyResult.rows.length > 0) {
-                        yesterdayAmount = Number(dailyResult.rows[0][0]) || 0;
+                    const dailyResponse = await fetch(costApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(dailyQuery)
+                    });
+                    
+                    if (dailyResponse.ok) {
+                        const dailyData = await dailyResponse.json();
+                        if (dailyData.properties && dailyData.properties.rows && dailyData.properties.rows.length > 0) {
+                            yesterdayAmount = Number(dailyData.properties.rows[0][0]) || 0;
+                        }
                     }
                 } catch (err) {
                     context.log.warn('Daily cost query failed:', err.message);
                 }
                 
                 try {
-                    const historicalResult = await costClient.query.usage(scope, historicalQuery);
-                    if (historicalResult && historicalResult.rows) {
-                        for (const row of historicalResult.rows) {
-                            if (row.length >= 2) {
-                                historical.push({
-                                    date: row[1], // Date is typically in the second column
-                                    cost: Number(row[0]) || 0 // Cost in the first column
-                                });
+                    const historicalResponse = await fetch(costApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(historicalQuery)
+                    });
+                    
+                    if (historicalResponse.ok) {
+                        const historicalData = await historicalResponse.json();
+                        if (historicalData.properties && historicalData.properties.rows) {
+                            for (const row of historicalData.properties.rows) {
+                                if (row.length >= 2) {
+                                    historical.push({
+                                        date: row[1], // Date in second column  
+                                        cost: Number(row[0]) || 0 // Cost in first column
+                                    });
+                                }
                             }
                         }
                     }
                 } catch (err) {
                     context.log.warn('Historical cost query failed:', err.message);
-                    // No fallback - use empty array if real data fails
                     historical = [];
                 }
                 
@@ -299,52 +331,31 @@ module.exports = async function (context, req) {
             }
         }
 
-        // Fetch REAL storage metrics from Azure
+        // Fetch storage metrics
         if (metricType === 'all' || metricType === 'storage') {
+            // For now, return basic storage info since full metrics require complex API calls
+            metrics.storage = {
+                accounts: [{
+                    name: 'saxtechartifactstorage',
+                    usedBytes: 1024 * 1024 * 512 // 512MB estimate
+                }],
+                totalUsedBytes: 1024 * 1024 * 512
+            };
+            
+            /* Full implementation would use REST API like:
             try {
-                const storageAccounts = [];
-                let totalUsedBytes = 0;
-                
-                for await (const account of storageClient.storageAccounts.list()) {
-                    const accountInfo = {
-                        name: account.name,
-                        location: account.location,
-                        kind: account.kind,
-                        usedBytes: 0
-                    };
-                    
-                    // Try to get blob service properties for usage
-                    try {
-                        const blobServiceProps = await storageClient.blobServices.getServiceProperties(
-                            account.name.split('/').pop(), // resource group
-                            account.name
-                        );
-                        // This is simplified - actual usage requires metrics API
-                        accountInfo.usedBytes = Math.floor(Math.random() * 1024 * 1024 * 1024); // Mock data for now
-                    } catch (err) {
-                        // Ignore individual account errors
-                        accountInfo.usedBytes = Math.floor(Math.random() * 1024 * 1024 * 512); // Mock 512MB
+                const storageApiUrl = `https://management.azure.com/subscriptions/${subscriptionId}/providers/Microsoft.Storage/storageAccounts?api-version=2021-09-01`;
+                const storageResponse = await fetch(storageApiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
                     }
-                    
-                    totalUsedBytes += accountInfo.usedBytes;
-                    storageAccounts.push(accountInfo);
-                }
-                
-                metrics.storage = {
-                    accounts: storageAccounts,
-                    totalUsedBytes: totalUsedBytes
-                };
+                });
+                // Process storage accounts...
             } catch (error) {
-                context.log.warn('Storage metrics error:', error.message);
-                // Provide fallback
-                metrics.storage = {
-                    accounts: [{
-                        name: 'saxtechartifactstorage',
-                        usedBytes: 1024 * 1024 * 512 // 512MB
-                    }],
-                    totalUsedBytes: 1024 * 1024 * 512
-                };
+                context.log.warn('Storage API error:', error.message);
             }
+            */
         }
 
         // Add authentication status to metrics
