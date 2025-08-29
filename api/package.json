@@ -1,0 +1,24 @@
+{
+  "name": "saxtech-azure-functions",
+  "version": "1.0.0",
+  "description": "Azure Functions for SAXTech Artifact Repository",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "@azure/identity": "^3.3.0",
+    "@azure/keyvault-secrets": "^4.7.0",
+    "@azure/arm-resources": "^5.2.0",
+    "@azure/arm-costmanagement": "^4.0.0",
+    "@azure/arm-monitor": "^7.0.0",
+    "@azure/arm-compute": "^21.0.0",
+    "@azure/arm-containerservice": "^19.0.0",
+    "@azure/arm-recoveryservicesbackup": "^11.0.0",
+    "@azure/arm-advisor": "^3.1.0",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.x"
+  }
+}

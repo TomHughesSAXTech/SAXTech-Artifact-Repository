@@ -2054,8 +2054,20 @@
         }
         
         // Load infrastructure status on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadInfrastructureStatus();
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Azure integration first
+            if (window.azureIntegration) {
+                try {
+                    await window.azureIntegration.initialize();
+                    console.log('Azure integration initialized');
+                } catch (error) {
+                    console.error('Failed to initialize Azure integration:', error);
+                }
+            }
+            
+            // Load infrastructure status
+            await loadInfrastructureStatus();
+            
             // Refresh every 5 minutes
             setInterval(loadInfrastructureStatus, 300000);
         });

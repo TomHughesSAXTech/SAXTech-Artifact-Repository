@@ -190,7 +190,7 @@ class AzureIntegration {
 
     async fetchCostData(timeframe = 'MonthToDate') {
         if (!this.accessToken || !this.subscriptionId) {
-            return { total: 0, daily: 0, byResourceGroup: {} };
+            return { monthToDate: 0, total: 0, daily: 0, byResourceGroup: {} };
         }
 
         try {
@@ -257,6 +257,7 @@ class AzureIntegration {
                 });
                 
                 this.costData = {
+                    monthToDate: Math.round(total * 100) / 100,
                     total: Math.round(total * 100) / 100,
                     daily: timeframe === 'Yesterday' ? Math.round(total * 100) / 100 : 0,
                     byResourceGroup: byResourceGroup
@@ -268,17 +269,18 @@ class AzureIntegration {
             console.error('Failed to fetch cost data:', error);
         }
         
-        return { total: 0, daily: 0, byResourceGroup: {} };
+        return { monthToDate: 0, total: 0, daily: 0, byResourceGroup: {} };
     }
 
     async fetchKubernetesMetrics() {
         // This would connect to Azure Monitor API for AKS metrics
         // For now, return placeholder until AKS monitoring is configured
         return {
-            clusters: [],
+            clusterCount: 0,
             totalNodes: 0,
-            cpuUsage: 0,
-            memoryUsage: 0
+            avgCpuUsage: 0,
+            avgMemoryUsage: 0,
+            clusters: []
         };
     }
 
@@ -286,19 +288,20 @@ class AzureIntegration {
         // This would connect to Azure Backup API
         // For now, return placeholder until backup is configured
         return {
-            lastBackup: 'Not configured',
-            storageUsed: '0 GB',
-            dailyBackups: '0/0',
-            recoveryPoint: 'N/A'
+            vaultCount: 0,
+            protectedItemCount: 0,
+            lastBackupTime: 'Not configured',
+            healthStatus: 'Unknown'
         };
     }
 
     async fetchServiceHealth() {
         if (!this.accessToken || !this.subscriptionId) {
             return {
-                uptime: 0,
-                responseTime: 0,
-                incidents: 0
+                activeIssues: 0,
+                plannedMaintenance: 0,
+                healthyVMs: 0,
+                totalVMs: 0
             };
         }
 
@@ -306,18 +309,20 @@ class AzureIntegration {
             // Fetch Application Insights data if available
             // This would need Application Insights resource ID
             return {
-                uptime: 99.9,
-                responseTime: 150,
-                incidents: 0
+                activeIssues: 0,
+                plannedMaintenance: 0,
+                healthyVMs: 0,
+                totalVMs: 0
             };
         } catch (error) {
             console.error('Failed to fetch service health:', error);
         }
         
         return {
-            uptime: 0,
-            responseTime: 0,
-            incidents: 0
+            activeIssues: 0,
+            plannedMaintenance: 0,
+            healthyVMs: 0,
+            totalVMs: 0
         };
     }
 
@@ -344,3 +349,6 @@ class AzureIntegration {
 
 // Export for use in other files
 window.AzureIntegration = AzureIntegration;
+
+// Create and export instance for use
+window.azureIntegration = new AzureIntegration();

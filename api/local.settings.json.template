@@ -1,0 +1,16 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AZURE_SUBSCRIPTION_ID": "your-subscription-id-here",
+    "OPENAI_API_KEY": "your-openai-api-key-here",
+    "OPENAI_ORG_ID": "your-openai-org-id-here",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "your-app-insights-connection-string-here"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}
