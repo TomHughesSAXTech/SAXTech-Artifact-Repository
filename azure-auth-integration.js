@@ -127,19 +127,19 @@ class AzureAuthIntegration {
                 
                 // Transform the API response to match our expected format
                 return {
-                    costs: {
-                        monthToDate: data.costs?.current || 0,
-                        yesterday: data.costs?.daily || 0,
-                        historical: data.costHistory || this.generateHistoricalCosts()
+                    costs: data.costs || {
+                        monthToDate: data.costs?.monthToDate || 0,
+                        yesterday: data.costs?.yesterday || 0,
+                        historical: data.costs?.historical || this.generateHistoricalCosts()
                     },
                     resources: {
-                        staticSites: data.resourceCounts?.staticWebApps || 0,
-                        functionApps: data.resourceCounts?.functionApps || 0,
-                        storageAccounts: data.resourceCounts?.storageAccounts || 0,
-                        webApps: data.resourceCounts?.webApps || 0
+                        staticSites: data.resourceCounts?.staticWebApps || data.resources?.staticSites || 0,
+                        functionApps: data.resourceCounts?.functionApps || data.resources?.functionApps || 0,
+                        storageAccounts: data.resourceCounts?.storageAccounts || data.resources?.storageAccounts || 0,
+                        webApps: data.resourceCounts?.webApps || data.resources?.webApps || 0
                     },
-                    storage: {
-                        accounts: data.storageAccounts || []
+                    storage: data.storage || {
+                        accounts: data.storage?.accounts || []
                     },
                     kubernetes: data.kubernetes || {
                         clusterCount: 0,
