@@ -739,9 +739,9 @@ async function fetchGPTUsage(bypassCache = false) {
         let totalCost = 0;
         const dailyUsage = {};
         
-        // Find OpenAI accounts
+        // Find OpenAI and AIServices accounts (which can also host OpenAI models)
         for await (const account of cognitiveClient.accounts.list()) {
-            if (account.kind === 'OpenAI') {
+            if (account.kind === 'OpenAI' || account.kind === 'AIServices') {
                 const accountResourceGroup = account.id.split('/')[4];
                 const accountDetails = {
                     name: account.name,
@@ -850,6 +850,8 @@ async function fetchGPTUsage(bypassCache = false) {
                 costPer1K = 0.03; // GPT-4 pricing
             } else if (modelLower.includes('gpt-3.5')) {
                 costPer1K = 0.002; // GPT-3.5 pricing
+            } else if (modelLower.includes('gpt-4.1-mini') || modelLower.includes('gpt-4o-mini')) {
+                costPer1K = 0.00015; // GPT-4o-mini input pricing
             } else if (modelLower.includes('embedding') || modelLower.includes('ada')) {
                 costPer1K = 0.0001; // Embedding model pricing (much cheaper!)
             } else if (modelLower.includes('davinci')) {
@@ -924,6 +926,31 @@ async function fetchResourcesInResourceGroup(resourceGroupName) {
                           resource.properties?.primaryEndpoints?.blob;
                 }
                 
+                // Estimate monthly costs based on resource type and SKU
+                let estimatedMonthlyCost = 0;
+                if (type === 'microsoft.web/sites') {
+                    // App Service pricing
+                    const sku = resource.sku?.name || resource.properties?.sku || 'F1';
+                    if (sku.startsWith('B')) estimatedMonthlyCost = 13.14; // Basic
+                    else if (sku.startsWith('S')) estimatedMonthlyCost = 73.00; // Standard
+                    else if (sku.startsWith('P')) estimatedMonthlyCost = 146.00; // Premium
+                } else if (type === 'microsoft.web/staticsites') {
+                    const sku = resource.sku?.name || 'Free';
+                    if (sku === 'Standard') estimatedMonthlyCost = 9.00;
+                } else if (type === 'microsoft.storage/storageaccounts') {
+                    estimatedMonthlyCost = 0.02; // Per GB, base cost
+                } else if (type === 'microsoft.search/searchservices') {
+                    const sku = resource.sku?.name || 'free';
+                    if (sku.toLowerCase() === 'basic') estimatedMonthlyCost = 75.00;
+                    else if (sku.toLowerCase() === 'standard') estimatedMonthlyCost = 250.00;
+                } else if (type === 'microsoft.cognitiveservices/accounts') {
+                    estimatedMonthlyCost = 0; // Pay per use
+                } else if (type === 'microsoft.dbforpostgresql/servers' || type.includes('postgresql')) {
+                    estimatedMonthlyCost = 25.00; // Basic tier estimate
+                } else if (type === 'microsoft.compute/virtualmachines') {
+                    estimatedMonthlyCost = 50.00; // B1s estimate
+                }
+                
                 resources.push({
                     name: resource.name,
                     type: resource.type,
@@ -931,7 +958,9 @@ async function fetchResourcesInResourceGroup(resourceGroupName) {
                     location: resource.location,
                     id: resource.id,
                     kind: resource.kind,
+                    sku: resource.sku?.name || resource.properties?.sku,
                     url: url,
+                    estimatedMonthlyCost: estimatedMonthlyCost,
                     tags: resource.tags || {}
                 });
             });
