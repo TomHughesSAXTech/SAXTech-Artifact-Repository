@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="chart.min.js?v=2"></script>
   <script src="chartjs-plugin-datalabels.min.js?v=2"></script>
+  <script src="azure-integration.js"></script>
   <style>
     :root {
       --bg: #060818; --card: #0f1729; --text: #e2e8f0; --muted: #94a3b8;
@@ -201,6 +202,15 @@
   </main>
 
   <script>
+    // Initialize Azure integration on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (window.azureIntegration) {
+        await window.azureIntegration.initialize();
+      }
+      bindSettings();
+      await refreshAllWithCharts();
+    });
+    
     const METRICS_API_URL = 'https://saxtech-metrics-api.azurewebsites.net/api/metrics'; // will be created below
 
     function dollars(v){ return `$${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` }
