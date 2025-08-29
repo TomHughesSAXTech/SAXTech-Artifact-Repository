@@ -34,7 +34,8 @@
         const results = document.getElementById('results');
         
         try {
-            const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics');
+            // Add nocache=true to bypass cache and get fresh data
+            const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics?nocache=true');
             const data = await response.json();
             loading.style.display = 'none';
             

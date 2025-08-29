@@ -183,67 +183,8 @@ async function fetchCostData(bypassCache = false) {
         const yesterdayKey = yesterdayDate.toISOString().split('T')[0];
         const yesterday = dailyCosts[yesterdayKey]?.cost || 0;
         
-        // If no cost data found, provide sample data
-        if (monthToDate === 0 && yesterday === 0 && historical.length === 0) {
-            console.log('No cost data found, generating sample data...');
-            const now = new Date();
-            const sampleHistorical = [];
-            let sampleMonthToDate = 0;
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            
-            // Generate 30 days of sample data
-            for (let i = 29; i >= 0; i--) {
-                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                const dateStr = date.toISOString().split('T')[0];
-                const dateInt = parseInt(dateStr.replace(/-/g, ''));
-                
-                // Random daily cost between $5 and $25
-                const dailyCost = Math.random() * 20 + 5;
-                
-                const dayData = {
-                    date: dateInt,
-                    dateStr: dateStr,
-                    cost: dailyCost,
-                    services: {
-                        'Virtual Machines': dailyCost * 0.3,
-                        'Storage': dailyCost * 0.2,
-                        'App Service': dailyCost * 0.15,
-                        'Functions': dailyCost * 0.1,
-                        'Cognitive Services': dailyCost * 0.15,
-                        'Container Registry': dailyCost * 0.1
-                    }
-                };
-                
-                sampleHistorical.push(dayData);
-                
-                if (date >= startOfMonth) {
-                    sampleMonthToDate += dailyCost;
-                }
-            }
-            
-            // Sample cost breakdown
-            const sampleCostBreakdown = {
-                'Virtual Machines': sampleMonthToDate * 0.3,
-                'Storage': sampleMonthToDate * 0.2,
-                'App Service': sampleMonthToDate * 0.15,
-                'Functions': sampleMonthToDate * 0.1,
-                'Cognitive Services': sampleMonthToDate * 0.15,
-                'Container Registry': sampleMonthToDate * 0.1
-            };
-            
-            const costData = {
-                monthToDate: sampleMonthToDate,
-                yesterday: sampleHistorical[sampleHistorical.length - 1]?.cost || 12.50,
-                currency: 'USD',
-                historical: sampleHistorical,
-                costBreakdown: sampleCostBreakdown,
-                dailyCosts: {},
-                isSampleData: true  // Flag to indicate this is sample data
-            };
-            
-            await setCachedData(cacheKey, costData);
-            return costData;
-        }
+        // Return actual data even if zero - NO FAKE DATA
+        console.log(`Cost data: MTD=${monthToDate}, Yesterday=${yesterday}, Historical=${historical.length} records`);
         
         const costData = {
             monthToDate,
@@ -918,38 +859,8 @@ async function fetchGPTUsage(bypassCache = false) {
             totalCost += modelUsage[model].cost;
         });
         
-        // If no model usage breakdown, but we have tokens, create model breakdown
-        if (Object.keys(modelUsage).length === 0 && totalTokens > 0) {
-            console.log(`Creating model breakdown for ${totalTokens} tokens`);
-            // Create model breakdown based on total tokens (30% GPT-4, 70% GPT-3.5)
-            modelUsage['gpt-4'] = { 
-                tokens: Math.floor(totalTokens * 0.3), 
-                requests: Math.floor(totalTokens / 5000), // Estimate requests
-                cost: (totalTokens * 0.3 * 0.03 / 1000) 
-            };
-            modelUsage['gpt-3.5-turbo'] = { 
-                tokens: Math.floor(totalTokens * 0.7), 
-                requests: Math.floor(totalTokens / 1000), // Estimate requests
-                cost: (totalTokens * 0.7 * 0.002 / 1000) 
-            };
-            totalCost = modelUsage['gpt-4'].cost + modelUsage['gpt-3.5-turbo'].cost;
-        }
-        
-        // If still no data, provide complete sample data
-        if (totalTokens === 0) {
-            // Sample data for demonstration
-            const now = new Date();
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-                const dateStr = date.toISOString().split('T')[0];
-                dailyUsage[dateStr] = Math.floor(Math.random() * 50000) + 10000;
-                totalTokens += dailyUsage[dateStr];
-            }
-            
-            modelUsage['gpt-4'] = { tokens: totalTokens * 0.3, requests: 100, cost: totalTokens * 0.3 * 0.03 / 1000 };
-            modelUsage['gpt-3.5-turbo'] = { tokens: totalTokens * 0.7, requests: 500, cost: totalTokens * 0.7 * 0.002 / 1000 };
-            totalCost = modelUsage['gpt-4'].cost + modelUsage['gpt-3.5-turbo'].cost;
-        }
+        // NO FAKE MODEL DATA - just return what we have
+        console.log(`GPT Usage: ${totalTokens} tokens, ${Object.keys(modelUsage).length} models detected`);
         
         // If we have daily usage but it's an object, convert to array
         const dailyUsageArray = [];
@@ -972,18 +883,7 @@ async function fetchGPTUsage(bypassCache = false) {
         return gptUsage;
     } catch (error) {
         console.error('Error fetching GPT usage:', error);
-        // Return sample data on error
-        return {
-            accounts: [],
-            modelUsage: {
-                'gpt-4': { tokens: 150000, requests: 100, cost: 4.5 },
-                'gpt-3.5-turbo': { tokens: 350000, requests: 500, cost: 0.7 }
-            },
-            dailyUsage: {},
-            totalTokens: 500000,
-            estimatedCost: 5.2,
-            period: '7d'
-        };
+        throw error; // Throw error instead of returning fake data
     }
 }
 
