@@ -103,7 +103,63 @@ class AzureAuthIntegration {
 
     // Get Azure metrics using the backend function
     async getAzureMetrics() {
-        // Use mock data for now since Functions need fixing
+        try {
+            const response = await fetch('/api/GetAzureMetrics', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Transform the API response to match our expected format
+                return {
+                    costs: {
+                        monthToDate: data.costs?.current || 0,
+                        yesterday: data.costs?.daily || 0,
+                        historical: data.costHistory || this.generateHistoricalCosts()
+                    },
+                    resources: {
+                        staticSites: data.resourceCounts?.staticWebApps || 0,
+                        functionApps: data.resourceCounts?.functionApps || 0,
+                        storageAccounts: data.resourceCounts?.storageAccounts || 0,
+                        webApps: data.resourceCounts?.webApps || 0
+                    },
+                    storage: {
+                        accounts: data.storageAccounts || []
+                    },
+                    kubernetes: data.kubernetes || {
+                        clusterCount: 0,
+                        totalNodes: 0,
+                        avgCpuUsage: 0,
+                        avgMemoryUsage: 0
+                    },
+                    virtualMachines: data.virtualMachines || {
+                        totalVMs: 0,
+                        healthyVMs: 0
+                    },
+                    serviceHealth: data.serviceHealth || {
+                        activeIssues: 0,
+                        plannedMaintenance: 0
+                    },
+                    authenticated: data.authenticated,
+                    user: data.user
+                };
+            } else {
+                console.error('Failed to fetch Azure metrics:', response.status);
+                // Return mock data as fallback
+                return this.getMockMetrics();
+            }
+        } catch (error) {
+            console.error('Error fetching Azure metrics:', error);
+            // Return mock data as fallback
+            return this.getMockMetrics();
+        }
+    }
+    
+    getMockMetrics() {
         return {
             costs: {
                 monthToDate: 127.43,
