@@ -6,9 +6,43 @@ const { ContainerServiceClient } = require('@azure/arm-containerservice');
 
 module.exports = async function (context, req) {
     context.log('GetAzureMetrics function triggered');
+    
+    // Add CORS headers
+    const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-ms-client-principal'
+    };
+
+    // Handle OPTIONS request for CORS
+    if (req.method === 'OPTIONS') {
+        context.res = {
+            status: 200,
+            headers: headers
+        };
+        return;
+    }
 
     try {
-        const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+        // Check for authentication header from Static Web App
+        const authHeader = req.headers['x-ms-client-principal'];
+        let userInfo = null;
+        
+        if (authHeader) {
+            try {
+                const encoded = Buffer.from(authHeader, 'base64');
+                const decoded = encoded.toString('ascii');
+                userInfo = JSON.parse(decoded);
+                context.log('User authenticated:', userInfo.userDetails);
+            } catch (e) {
+                context.log('Failed to parse auth header:', e);
+            }
+        }
+        
+        const subscriptionId = req.body?.subscriptionId || 
+                             process.env.AZURE_SUBSCRIPTION_ID || 
+                             "3cfb259a-f02a-484e-9ce3-d83c21fd0ddb";
         const metricType = req.query.type || req.body?.type || 'all';
         
         if (!subscriptionId) {
@@ -16,7 +50,8 @@ module.exports = async function (context, req) {
                 status: 400,
                 body: {
                     error: "Subscription ID is required"
-                }
+                },
+                headers: headers
             };
             return;
         }
@@ -120,11 +155,15 @@ module.exports = async function (context, req) {
             };
         }
 
+        // Add authentication status to metrics
+        metrics.authenticated = !!userInfo;
+        metrics.user = userInfo?.userDetails || 'anonymous';
+        metrics.subscriptionId = subscriptionId;
+        metrics.timestamp = new Date().toISOString();
+        
         context.res = {
             status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: metrics
         };
     } catch (error) {
@@ -135,7 +174,8 @@ module.exports = async function (context, req) {
             body: {
                 error: "Failed to fetch Azure metrics",
                 details: error.message
-            }
+            },
+            headers: headers
         };
     }
 };

@@ -2,8 +2,39 @@ const fetch = require('node-fetch');
 
 module.exports = async function (context, req) {
     context.log('GetGPTUsage function triggered');
+    
+    // Add CORS headers
+    const corsHeaders = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-ms-client-principal'
+    };
+
+    // Handle OPTIONS request for CORS
+    if (req.method === 'OPTIONS') {
+        context.res = {
+            status: 200,
+            headers: corsHeaders
+        };
+        return;
+    }
 
     try {
+        // Check for authentication header from Static Web App
+        const authHeader = req.headers['x-ms-client-principal'];
+        let userInfo = null;
+        
+        if (authHeader) {
+            try {
+                const encoded = Buffer.from(authHeader, 'base64');
+                const decoded = encoded.toString('ascii');
+                userInfo = JSON.parse(decoded);
+                context.log('User authenticated:', userInfo.userDetails);
+            } catch (e) {
+                context.log('Failed to parse auth header:', e);
+            }
+        }
         // Get OpenAI API key from environment variables
         const openaiApiKey = process.env.OPENAI_API_KEY;
         const openaiOrgId = process.env.OPENAI_ORG_ID;
@@ -12,8 +43,11 @@ module.exports = async function (context, req) {
             context.res = {
                 status: 400,
                 body: {
-                    error: "OpenAI API key not configured"
-                }
+                    error: "OpenAI API key not configured",
+                    authenticated: !!userInfo,
+                    user: userInfo?.userDetails || 'anonymous'
+                },
+                headers: corsHeaders
             };
             return;
         }
@@ -101,12 +135,15 @@ module.exports = async function (context, req) {
             }
             usageData.daily = sampleDates;
         }
+        
+        // Add authentication info to response
+        usageData.authenticated = !!userInfo;
+        usageData.user = userInfo?.userDetails || 'anonymous';
+        usageData.timestamp = new Date().toISOString();
 
         context.res = {
             status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: corsHeaders,
             body: usageData
         };
     } catch (error) {
@@ -120,8 +157,11 @@ module.exports = async function (context, req) {
                 daily: [],
                 byProject: {},
                 totalTokens: 0,
-                totalCost: 0
-            }
+                totalCost: 0,
+                authenticated: false,
+                user: 'anonymous'
+            },
+            headers: corsHeaders
         };
     }
 };

@@ -1,37 +1,39 @@
-const { DefaultAzureCredential } = require("@azure/identity");
-
 module.exports = async function (context, req) {
-    context.log('Getting Azure management token');
-
-    try {
-        // Use Managed Identity to authenticate
-        const credential = new DefaultAzureCredential();
-        
-        // Get the access token for Azure Management API
-        const tokenResponse = await credential.getToken("https://management.azure.com/.default");
-        
-        // Get subscription ID from environment variable
-        const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID || "3cfb259a-f02a-484e-9ce3-d83c21fd0ddb";
+    context.log('GetAzureToken function triggered');
+    
+    // For Static Web Apps with linked backend, auth is passed through
+    // We'll use the user's token from the Static Web App auth
+    const header = req.headers['x-ms-client-principal'];
+    const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID || "3cfb259a-f02a-484e-9ce3-d83c21fd0ddb";
+    
+    if (header) {
+        // User is authenticated via Static Web App
+        const encoded = Buffer.from(header, 'base64');
+        const decoded = encoded.toString('ascii');
+        const principal = JSON.parse(decoded);
         
         context.res = {
             status: 200,
             body: {
-                accessToken: tokenResponse.token,
+                authenticated: true,
+                userDetails: principal.userDetails,
                 subscriptionId: subscriptionId,
-                expiresOn: tokenResponse.expiresOnTimestamp
+                // Note: We can't get Azure management token this way,
+                // need to use managed identity or service principal
+                message: "Use GetAzureMetrics for actual data"
             },
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'
             }
         };
-    } catch (error) {
-        context.log.error('Failed to get Azure token:', error);
+    } else {
         context.res = {
-            status: 500,
+            status: 200,
             body: {
-                error: 'Failed to authenticate with Azure',
-                details: error.message
+                authenticated: false,
+                subscriptionId: subscriptionId,
+                message: "Not authenticated"
             },
             headers: {
                 'Content-Type': 'application/json',
