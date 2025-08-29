@@ -752,14 +752,16 @@ async function fetchResourcesInResourceGroup(resourceGroupName) {
         const graphClient = new ResourceGraphClient(credential);
         
         // Query for all resources in the specific resource group
+        // Using tolower() for case-insensitive comparison
         const query = {
             subscriptions: [subscriptionId],
             query: `
                 Resources
                 | where subscriptionId == '${subscriptionId}' 
-                | where resourceGroup =~ '${resourceGroupName}'
-                | project name, type, location, id, kind, properties, tags
+                | where tolower(resourceGroup) == tolower('${resourceGroupName}')
+                | project name, type, location, id, kind, properties, tags, resourceGroup
                 | order by type asc, name asc
+                | limit 1000
             `
         };
         
