@@ -17,6 +17,34 @@
       "allowedRoles": ["anonymous"]
     },
     {
+      "route": "/*.js",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.css",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.png",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.jpg",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.gif",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.svg",
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/*.ico",
+      "allowedRoles": ["anonymous"]
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["authenticated", "anonymous"]
     },
@@ -26,6 +54,10 @@
     },
     {
       "route": "/dashboard.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/test-api.html",
       "allowedRoles": ["authenticated"]
     },
     {
