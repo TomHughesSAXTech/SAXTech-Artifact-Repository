@@ -122,7 +122,21 @@ async function fetchCostData() {
                 const service = row[2] || 'Unknown';
                 
                 // Parse date and create consistent format
-                const date = new Date(dateStr);
+                // Handle various date formats from Azure
+                let date;
+                if (!isNaN(Date.parse(dateStr))) {
+                    date = new Date(dateStr);
+                } else {
+                    // If the date string is invalid, skip this row
+                    console.log(`Skipping invalid date: ${dateStr}`);
+                    return;
+                }
+                
+                if (isNaN(date.getTime())) {
+                    console.log(`Invalid date parsed: ${dateStr}`);
+                    return;
+                }
+                
                 const dateKey = date.toISOString().split('T')[0];
                 const dateInt = parseInt(dateKey.replace(/-/g, ''));
                 
@@ -206,9 +220,24 @@ async function fetchResourceCounts() {
         
         // Method 1: Try using WebSiteManagementClient for web resources
         try {
-            // Get Static Web Apps
+            // Get Static Web Apps with custom domains
             for await (const staticSite of webClient.staticSites.list()) {
                 staticSites++;
+                
+                // Get custom domains
+                let customDomains = [];
+                try {
+                    const rgName = staticSite.id?.split('/')[4];
+                    if (rgName) {
+                        const domains = webClient.staticSites.listStaticSiteCustomDomains(rgName, staticSite.name);
+                        for await (const domain of domains) {
+                            customDomains.push(domain.domainName || domain);
+                        }
+                    }
+                } catch (err) {
+                    console.log(`Could not get custom domains for ${staticSite.name}`);
+                }
+                
                 resourceDetails.staticSites.push({
                     name: staticSite.name,
                     location: staticSite.location,
@@ -217,6 +246,10 @@ async function fetchResourceCounts() {
                     endpoint: staticSite.defaultHostname ? 
                         `https://${staticSite.defaultHostname}` : 
                         `https://${staticSite.name}.azurestaticapps.net`,
+                    customDomains: customDomains,
+                    sku: staticSite.sku?.name || 'Free',
+                    tier: staticSite.sku?.tier || 'Free',
+                    monthlyCost: staticSite.sku?.name === 'Standard' ? 9 : 0,
                     properties: staticSite,
                     tags: staticSite.tags || {},
                     createdTime: staticSite.systemData?.createdAt
@@ -224,22 +257,49 @@ async function fetchResourceCounts() {
             }
             console.log(`Found ${staticSites} static web apps`);
             
-            // Get all Web Apps (includes Function Apps)
+            // Get all Web Apps (includes Function Apps) with function details
             for await (const site of webClient.webApps.list()) {
                 totalResources++;
                 const kind = (site.kind || '').toLowerCase();
                 if (kind.includes('functionapp')) {
                     functionApps++;
+                    
+                    // Get function list
+                    let functionsList = [];
+                    try {
+                        const rgName = site.id?.split('/')[4];
+                        if (rgName) {
+                            const functions = webClient.webApps.listFunctions(rgName, site.name);
+                            for await (const func of functions) {
+                                functionsList.push({
+                                    name: func.name?.split('/').pop() || func.name,
+                                    language: func.config?.bindings?.[0]?.type || 'Unknown',
+                                    isDisabled: func.config?.disabled || false
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        console.log(`Could not get functions for ${site.name}`);
+                    }
+                    
+                    const isLinux = kind.includes('linux');
+                    const osType = isLinux ? 'Linux' : 'Windows';
+                    
                     resourceDetails.functionApps.push({
                         name: site.name,
                         location: site.location,
                         resourceGroup: site.id?.split('/')[4] || 'unknown',
                         id: site.id,
                         kind: site.kind,
+                        osType: osType,
+                        runtime: site.siteConfig?.linuxFxVersion || site.siteConfig?.nodeVersion || 'Unknown',
                         endpoint: site.defaultHostName ? 
                             `https://${site.defaultHostName}` : 
                             `https://${site.name}.azurewebsites.net`,
                         state: site.state,
+                        sku: site.sku || 'Consumption',
+                        functionCount: functionsList.length,
+                        functions: functionsList,
                         properties: site,
                         tags: site.tags || {},
                         createdTime: site.systemData?.createdAt
