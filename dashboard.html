@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Automation & AI Hub | Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060818; --card: #0f1729; --text: #e2e8f0; --muted: #94a3b8;
+      --primary: #00d4ff; --accent: #7c3aed; --good: #10b981; --warn: #f59e0b; --bad: #ef4444;
+      --border: rgba(0,212,255,0.15);
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #060818; color: var(--text); }
+    header { position: sticky; top:0; z-index: 50; backdrop-filter: blur(10px); background: rgba(6,8,24,0.75); border-bottom:1px solid var(--border); }
+    .wrap { max-width: 1300px; margin: 0 auto; padding: 20px 24px; }
+    .row { display:flex; align-items:center; justify-content: space-between; gap: 16px; }
+    .title { font-weight: 800; font-size: 22px; letter-spacing: -0.3px; }
+    .subtitle { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.6px; }
+    .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); color:#fff; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .btn.secondary { background: rgba(124,58,237,0.12); color: var(--primary); border:1px solid var(--border); }
+    .grid { display:grid; gap:16px; grid-template-columns: repeat(12, 1fr); margin-top: 20px; }
+    .card { background: var(--card); border:1px solid var(--border); border-radius: 14px; padding: 16px; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    .stat { display:flex; align-items: center; justify-content: space-between; }
+    .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .value { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .row-col { display:flex; gap:10px; align-items:center; }
+    .list { display:flex; flex-direction: column; gap:10px; }
+    .kpi { display:flex; align-items:center; justify-content: space-between; padding: 10px; background: rgba(0,212,255,0.06); border: 1px dashed var(--border); border-radius:10px; }
+    .muted { color: var(--muted); }
+    .pill { font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .section-title { font-weight:700; margin-bottom:8px; }
+    .settings-grid { display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
+    input[type="number"], input[type="text"] { width: 100%; padding: 12px; border-radius: 10px; border:1px solid var(--border); background: #0b1120; color: var(--text); }
+    .note { font-size:12px; color: var(--muted); }
+    a { color: var(--primary); text-decoration: none; }
+    @media (max-width: 900px) { .span-6, .span-8, .span-4, .span-3 { grid-column: span 12; } .settings-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="row">
+        <div>
+          <div class="title">Automation & AI Hub — Live Dashboard</div>
+          <div class="subtitle">Real-time Azure metrics · Manual tool costs</div>
+        </div>
+        <div class="row-col">
+          <button class="btn secondary" onclick="window.location.href='index.html'">⬅ Back to Hub</button>
+          <button class="btn" onclick="refreshAll()">Refresh</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="grid">
+      <div class="card span-3">
+        <div class="stat"><div class="label">Month-to-Date Cost</div><div id="cost_mtd" class="value">$0</div></div>
+        <div class="note">Azure — subscription 3cfb259a-f02a-484e-9ce3-d83c21fd0ddb</div>
+      </div>
+      <div class="card span-3">
+        <div class="stat"><div class="label">Daily Cost (Yesterday)</div><div id="cost_daily" class="value">$0</div></div>
+        <div class="note">UTC timezone</div>
+      </div>
+      <div class="card span-3">
+        <div class="stat"><div class="label">Static Web Apps</div><div id="count_swa" class="value">0</div></div>
+        <div class="note">Microsoft.Web/staticSites</div>
+      </div>
+      <div class="card span-3">
+        <div class="stat"><div class="label">Function Apps</div><div id="count_func" class="value">0</div></div>
+        <div class="note">Microsoft.Web/sites (functionapp)</div>
+      </div>
+
+      <div class="card span-4">
+        <div class="stat"><div class="label">Storage Accounts</div><div id="count_sa" class="value">0</div></div>
+        <div class="kpi" style="margin-top:10px;">
+          <div>Total Storage Used</div>
+          <div id="storage_used" class="pill">0 B</div>
+        </div>
+        <div class="list" id="storage_list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card span-8">
+        <div class="section-title">Revenue vs. Costs</div>
+        <div class="list" id="rev_cost_list">
+          <div class="kpi"><div>Monthly Recurring Revenue (sum of active projects)</div><div id="mrr_sum" class="pill">$0</div></div>
+          <div class="kpi"><div>Implementation Fees (closed this month)</div><div id="impl_sum" class="pill">$0</div></div>
+          <div class="kpi"><div>Manual Tool Costs (ChatGPT, Claude, Warp, other)</div><div id="tools_cost" class="pill">$0</div></div>
+          <div class="kpi"><div>Azure Month-to-Date Cost</div><div id="azure_cost_pill" class="pill">$0</div></div>
+          <div class="kpi"><div>Net (MRR + Impl - Tools - Azure)</div><div id="net_value" class="pill">$0</div></div>
+        </div>
+      </div>
+
+      <div class="card span-12">
+        <div class="section-title">Settings — Manual Tool Costs</div>
+        <div class="settings-grid">
+          <div>
+            <label>ChatGPT Monthly ($)</label>
+            <input type="number" id="cost_chatgpt" min="0" step="0.01" />
+          </div>
+          <div>
+            <label>Claude Monthly ($)</label>
+            <input type="number" id="cost_claude" min="0" step="0.01" />
+          </div>
+          <div>
+            <label>Warp Monthly ($)</label>
+            <input type="number" id="cost_warp" min="0" step="0.01" />
+          </div>
+          <div>
+            <label>Other Tools Monthly ($)</label>
+            <input type="number" id="cost_other" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <div class="note">Only manual entries here. All Azure metrics are live from your subscription.</div>
+          <div>
+            <button class="btn secondary" onclick="resetSettings()">Reset</button>
+            <button class="btn" onclick="saveSettings()">Save</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const METRICS_API_URL = 'https://saxtech-metrics-api.azurewebsites.net/api/metrics'; // will be created below
+
+    function dollars(v){ return `$${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` }
+    function bytes(v){
+      const n = Number(v||0);
+      if (n < 1024) return `${n} B`;
+      const units=['KB','MB','GB','TB','PB']; let u=-1; let s=n;
+      do { s/=1024; u++; } while (s>=1024 && u<units.length-1);
+      return `${s.toFixed(2)} ${units[u]}`;
+    }
+
+    function loadSettings(){
+      try { return JSON.parse(localStorage.getItem('sax_settings_tools')||'{}'); } catch(_){ return {}; }
+    }
+    function saveSettings(){
+      const payload={
+        chatgpt: parseFloat(document.getElementById('cost_chatgpt').value)||0,
+        claude: parseFloat(document.getElementById('cost_claude').value)||0,
+        warp: parseFloat(document.getElementById('cost_warp').value)||0,
+        other: parseFloat(document.getElementById('cost_other').value)||0,
+      };
+      localStorage.setItem('sax_settings_tools', JSON.stringify(payload));
+      computeRevCost();
+    }
+    function resetSettings(){ localStorage.removeItem('sax_settings_tools'); bindSettings(); computeRevCost(); }
+
+    function bindSettings(){
+      const s=loadSettings();
+      document.getElementById('cost_chatgpt').value = s.chatgpt||0;
+      document.getElementById('cost_claude').value  = s.claude||0;
+      document.getElementById('cost_warp').value    = s.warp||0;
+      document.getElementById('cost_other').value   = s.other||0;
+    }
+
+    async function fetchMetrics(){
+      const resp = await fetch(METRICS_API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ scope: 'subscription', subscriptionId: '3cfb259a-f02a-484e-9ce3-d83c21fd0ddb', resourceGroup: 'SAXTech-AI' }) });
+      if(!resp.ok){ throw new Error(`Metrics HTTP ${resp.status}`); }
+      return await resp.json();
+    }
+
+    function sumMRRFromProjects(){
+      try {
+        const projects = (window.blobManager && window.blobManager.getProjects()) || JSON.parse(localStorage.getItem('saxtech_projects')||'[]');
+        let mrr=0, impl=0;
+        const now = new Date();
+        const ym = now.toISOString().slice(0,7);
+        for(const p of projects){
+          if(p.mrr && (p.status!== 'Lost Deal')){ mrr += Number(p.mrr)||0; }
+          if(p.implementationFee){
+            // naive: count if created this month
+            const created = p.created ? new Date(p.created) : null;
+            const cym = created ? created.toISOString().slice(0,7) : null;
+            if(cym === ym) impl += Number(p.implementationFee)||0;
+          }
+        }
+        return { mrr, impl };
+      } catch(_){ return { mrr:0, impl:0 }; }
+    }
+
+    function computeRevCost(){
+      const tool = loadSettings();
+      const toolSum = (tool.chatgpt||0)+(tool.claude||0)+(tool.warp||0)+(tool.other||0);
+      document.getElementById('tools_cost').textContent = dollars(toolSum);
+      const { mrr, impl } = sumMRRFromProjects();
+      document.getElementById('mrr_sum').textContent = dollars(mrr);
+      document.getElementById('impl_sum').textContent = dollars(impl);
+      const azure = Number(document.getElementById('azure_cost_pill').dataset.val||0);
+      const net = mrr + impl - toolSum - azure;
+      document.getElementById('net_value').textContent = dollars(net);
+    }
+
+    async function refreshAll(){
+      try{
+        const data = await fetchMetrics();
+        // costs
+        document.getElementById('cost_mtd').textContent = dollars(data.costs?.monthToDate||0);
+        document.getElementById('cost_daily').textContent = dollars(data.costs?.yesterday||0);
+        document.getElementById('azure_cost_pill').textContent = dollars(data.costs?.monthToDate||0);
+        document.getElementById('azure_cost_pill').dataset.val = String(data.costs?.monthToDate||0);
+        // counts
+        document.getElementById('count_swa').textContent = data.resources?.staticSites||0;
+        document.getElementById('count_func').textContent = data.resources?.functionApps||0;
+        document.getElementById('count_sa').textContent = data.resources?.storageAccounts||0;
+        // storage list
+        const list = document.getElementById('storage_list');
+        list.innerHTML = '';
+        let totalUsed = 0;
+        for(const s of (data.storage?.accounts||[])){
+          totalUsed += s.usedBytes||0;
+          const div = document.createElement('div');
+          div.className = 'kpi';
+          div.innerHTML = `<div>${s.name}</div><div class="pill">${bytes(s.usedBytes||0)}</div>`;
+          list.appendChild(div);
+        }
+        document.getElementById('storage_used').textContent = bytes(totalUsed);
+      }catch(err){
+        console.error('Dashboard metrics error:', err);
+      } finally{
+        computeRevCost();
+      }
+    }
+
+    // init
+    bindSettings();
+    refreshAll();
+  </script>
+</body>
+</html>
+

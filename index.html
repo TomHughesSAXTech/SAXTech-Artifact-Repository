@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAX Technology Advisors | Enterprise Artifact Repository</title>
+    <title>SAX Technology Advisors | Automation and AI Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
@@ -842,7 +842,7 @@
                     <div class="logo-mark">SAX</div>
                     <div class="brand-text">
                         <div class="brand-name">SAX Technology Advisors</div>
-                        <div class="brand-tagline">Enterprise Artifact Repository</div>
+                        <div class="brand-tagline">Automation and AI Hub</div>
                     </div>
                 </div>
                 <div class="header-stats">
@@ -859,8 +859,8 @@
                         <div class="stat-label">Client Partners</div>
                     </div>
                     <div class="stat-card" style="background: var(--gradient-accent); color: white;">
-                        <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 500;">Loading...</div>
-                        <div class="stat-label" style="color: white;">Logged In</div>
+                        <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 600; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Loading...</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,0.95);">Logged In</div>
                     </div>
                 </div>
             </div>
@@ -869,8 +869,8 @@
 
     <main class="container">
         <section class="hero-section">
-            <h1 class="hero-title">SAXTech Artifact Repository</h1>
-            <p class="hero-subtitle">Enterprise-grade project management and artifact storage</p>
+            <h1 class="hero-title">SAXTech Automation and AI Hub</h1>
+            <p class="hero-subtitle">Unified command center for AI tools, automation workflows, and business intelligence</p>
         </section>
 
         <div class="action-bar">
@@ -885,6 +885,30 @@
             <button class="btn btn-secondary" onclick="refreshProjects()">
                 <span class="btn-icon">🔄</span>
                 Sync with Azure
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='dashboard.html'" style="background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);">
+                <span class="btn-icon">📊</span>
+                Live Dashboard
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://claude.ai', '_blank')">
+                <span class="btn-icon">🤖</span>
+                Claude AI
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://chat.openai.com', '_blank')">
+                <span class="btn-icon">💬</span>
+                ChatGPT
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://workflows.saxtechnology.com', '_blank')">
+                <span class="btn-icon">⚙️</span>
+                SAX Automation
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://app.warp.dev', '_blank')">
+                <span class="btn-icon">🚀</span>
+                WARP.DEV
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://portal.azure.com', '_blank')">
+                <span class="btn-icon">☁️</span>
+                Azure Portal
             </button>
         </div>
 
@@ -943,6 +967,20 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Project Status <span class="required">*</span></label>
+                    <select class="form-select" id="projectStatus" required>
+                        <option value="">Select project status</option>
+                        <option value="Design">Design</option>
+                        <option value="Building Beta">Building Beta</option>
+                        <option value="Waiting on Client">Waiting on Client</option>
+                        <option value="Building for Production">Building for Production</option>
+                        <option value="Live in Production">Live in Production</option>
+                        <option value="Under Maintenance">Under Maintenance</option>
+                        <option value="Lost Deal">Lost Deal</option>
+                        <option value="Internal Usage">Internal Usage</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Project Description</label>
                     <textarea class="form-textarea" id="projectDescription" placeholder="Provide project overview and objectives"></textarea>
                 </div>
@@ -953,6 +991,14 @@
                 <div class="form-group">
                     <label class="form-label">Azure Frontend URL</label>
                     <input type="url" class="form-input" id="frontendUrl" placeholder="https://[project].azurewebsites.net">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Monthly Recurring Revenue (MRR)</label>
+                    <input type="number" class="form-input" id="mrrValue" placeholder="Enter MRR in USD" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Implementation Fee</label>
+                    <input type="number" class="form-input" id="implementationFee" placeholder="Enter one-time implementation fee in USD" min="0" step="0.01">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('createProjectModal')">Cancel</button>
@@ -1237,9 +1283,12 @@
                     name: document.getElementById('projectName').value,
                     client: document.getElementById('clientName').value,
                     type: document.getElementById('projectType').value,
+                    status: document.getElementById('projectStatus').value,
                     description: document.getElementById('projectDescription').value || "New project pending description",
                     github: document.getElementById('githubUrl').value,
-                    frontend: document.getElementById('frontendUrl').value
+                    frontend: document.getElementById('frontendUrl').value,
+                    mrr: parseFloat(document.getElementById('mrrValue').value) || 0,
+                    implementationFee: parseFloat(document.getElementById('implementationFee').value) || 0
                 };
                 
                 const newProject = window.blobManager.createProject(projectData);
