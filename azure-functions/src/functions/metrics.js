@@ -119,28 +119,23 @@ async function fetchCostData(bypassCache = false) {
         
         if (result.rows && result.rows.length > 0) {
             result.rows.forEach(row => {
+                // Azure returns [cost, date, currency] OR [cost, date, service] depending on grouping
                 const cost = parseFloat(row[0]) || 0;
-                const dateStr = String(row[1]);
-                const service = row[2] || 'Unknown';
+                const dateInt = row[1]; // This is already an integer like 20250829
+                let service = 'Total';
                 
-                // Parse date and create consistent format
-                // Handle various date formats from Azure
-                let date;
-                if (!isNaN(Date.parse(dateStr))) {
-                    date = new Date(dateStr);
-                } else {
-                    // If the date string is invalid, skip this row
-                    console.log(`Skipping invalid date: ${dateStr}`);
-                    return;
+                // Check if third element is currency or service name
+                if (row[2] && row[2] !== 'USD' && row[2] !== 'EUR') {
+                    service = row[2];
                 }
                 
-                if (isNaN(date.getTime())) {
-                    console.log(`Invalid date parsed: ${dateStr}`);
-                    return;
-                }
-                
+                // Parse date from integer format (20250829) to Date object
+                const dateStr = String(dateInt);
+                const year = parseInt(dateStr.substring(0, 4));
+                const month = parseInt(dateStr.substring(4, 6)) - 1; // JS months are 0-indexed
+                const day = parseInt(dateStr.substring(6, 8));
+                const date = new Date(year, month, day);
                 const dateKey = date.toISOString().split('T')[0];
-                const dateInt = parseInt(dateKey.replace(/-/g, ''));
                 
                 // Aggregate daily totals
                 if (!dailyCosts[dateKey]) {
