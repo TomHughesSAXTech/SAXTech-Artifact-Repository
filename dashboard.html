@@ -846,10 +846,30 @@
 
     // Update charts
     function updateCharts(data) {
-      // Historical cost chart
+      // Historical cost chart with trend line
       if (data.costs && data.costs.historical) {
         const ctx = document.getElementById('costTrendChart').getContext('2d');
         const historical = data.costs.historical.slice(-30);
+        
+        // Calculate trend line using linear regression
+        const calculateTrendLine = (data) => {
+          const n = data.length;
+          let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+          
+          data.forEach((point, i) => {
+            sumX += i;
+            sumY += point.cost;
+            sumXY += i * point.cost;
+            sumX2 += i * i;
+          });
+          
+          const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+          const intercept = (sumY - slope * sumX) / n;
+          
+          return data.map((_, i) => slope * i + intercept);
+        };
+        
+        const trendData = calculateTrendLine(historical);
         
         if (charts.costTrend) charts.costTrend.destroy();
         
@@ -863,19 +883,58 @@
               const day = dateStr.substring(6, 8);
               return `${month}/${day}`;
             }),
-            datasets: [{
-              label: 'Daily Cost',
-              data: historical.map(h => h.cost),
-              borderColor: '#00d4ff',
-              backgroundColor: 'rgba(0, 212, 255, 0.1)',
-              tension: 0.4
-            }]
+            datasets: [
+              {
+                label: 'Daily Cost',
+                data: historical.map(h => h.cost),
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.1
+              },
+              {
+                label: 'Trend',
+                data: trendData,
+                borderColor: '#7c3aed',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false,
+                tension: 0
+              }
+            ]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
             plugins: {
-              legend: { display: false }
+              legend: { 
+                display: true,
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 10
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    label += '$' + context.parsed.y.toFixed(2);
+                    return label;
+                  }
+                }
+              }
             },
             scales: {
               y: {
@@ -884,6 +943,11 @@
                   callback: function(value) {
                     return '$' + value.toFixed(0);
                   }
+                }
+              },
+              x: {
+                grid: {
+                  display: false
                 }
               }
             }
