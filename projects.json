@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "name": "SAX Tech Website",
+    "client": "SAXTechnology",
+    "status": "Active",
+    "mrr": 500,
+    "implementationFee": 2500,
+    "description": "Main corporate website with Azure integration",
+    "technologies": ["Azure", "HTML", "JavaScript"],
+    "created": "2025-01-15T00:00:00Z"
+  },
+  {
+    "id": "2",
+    "name": "N8N Automation Platform",
+    "client": "Internal",
+    "status": "Active",
+    "mrr": 300,
+    "implementationFee": 1500,
+    "description": "Workflow automation system with Azure Kubernetes",
+    "technologies": ["N8N", "Kubernetes", "Azure"],
+    "created": "2025-02-01T00:00:00Z"
+  },
+  {
+    "id": "3",
+    "name": "AI Dashboard",
+    "client": "Enterprise Client",
+    "status": "In Development",
+    "mrr": 750,
+    "implementationFee": 5000,
+    "description": "Real-time metrics dashboard with GPT integration",
+    "technologies": ["React", "Azure Functions", "OpenAI"],
+    "created": "2025-03-01T00:00:00Z"
+  },
+  {
+    "id": "4",
+    "name": "Blob Storage Manager",
+    "client": "SMB Client",
+    "status": "Active",
+    "mrr": 200,
+    "implementationFee": 1000,
+    "description": "Azure Blob Storage management interface",
+    "technologies": ["Azure Blob", "JavaScript", "HTML"],
+    "created": "2025-02-15T00:00:00Z"
+  },
+  {
+    "id": "5",
+    "name": "Cost Optimization Tool",
+    "client": "Enterprise Client 2",
+    "status": "Proposed",
+    "mrr": 450,
+    "implementationFee": 3000,
+    "description": "Azure cost analysis and optimization platform",
+    "technologies": ["Azure Cost Management", "Python", "PowerBI"],
+    "created": "2025-03-10T00:00:00Z"
+  }
+]
