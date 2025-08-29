@@ -150,8 +150,16 @@ class N8NIntegration {
         const startTime = Date.now();
         let syncCount = 0;
         
-        if (!window.blobManager || !window.blobManager.projects) {
-            console.error('Blob manager not initialized');
+        // Wait for blob manager to initialize if it hasn't yet
+        if (!window.blobManager) {
+            console.log('Waiting for blob manager to initialize...');
+            // Try again in 2 seconds
+            setTimeout(() => this.syncAllWorkflows(), 2000);
+            return;
+        }
+        
+        if (!window.blobManager.projects || window.blobManager.projects.length === 0) {
+            console.log('No projects available for N8N sync');
             return;
         }
         

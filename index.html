@@ -1044,9 +1044,9 @@
                         <div class="stat-label">Client Partners</div>
                     </div>
                     <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; position: relative; min-width: 180px;">
-                        <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); padding-right: 50px;">Loading...</div>
+                        <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); padding-right: 50px; word-break: break-all;">Checking...</div>
                         <div class="stat-label" style="color: rgba(255,255,255,0.95); font-weight: 600;">Logged In</div>
-                        <button onclick="logout()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;">Logout</button>
+                        <button onclick="logout()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; backdrop-filter: blur(10px);">Logout</button>
                     </div>
                 </div>
             </div>
@@ -2072,21 +2072,33 @@
             setInterval(loadInfrastructureStatus, 300000);
         });
         
-        // Display user info
-        fetch('/.auth/me')
-            .then(response => response.json())
-            .then(data => {
-                if (data.clientPrincipal && data.clientPrincipal.userDetails) {
-                    const email = data.clientPrincipal.userDetails;
+        // Check authentication and display user info
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/.auth/me');
+                const data = await response.json();
+                
+                // Check if user is authenticated (clientPrincipal exists)
+                if (data && data.length > 0 && data[0] && data[0].userDetails) {
+                    // User is authenticated
+                    const email = data[0].userDetails;
                     const shortEmail = email.length > 20 ? email.substring(0, 17) + '...' : email;
                     document.getElementById('userEmail').textContent = shortEmail;
                     document.getElementById('userEmail').title = email;
+                } else {
+                    // User is not authenticated - redirect to login
+                    console.log('User not authenticated, redirecting to login...');
+                    window.location.href = '/login.html';
                 }
-            })
-            .catch(error => {
-                console.error('Error getting user info:', error);
-                document.getElementById('userEmail').textContent = 'Anonymous';
-            });
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                // In case of error, redirect to login for safety
+                window.location.href = '/login.html';
+            }
+        }
+        
+        // Check authentication on page load
+        checkAuthentication();
         
         // Close modals on outside click
         window.addEventListener('click', (e) => {

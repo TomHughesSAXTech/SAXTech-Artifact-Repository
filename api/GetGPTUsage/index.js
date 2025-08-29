@@ -51,13 +51,18 @@ module.exports = async function (context, req) {
         const openaiApiKey = process.env.OPENAI_API_KEY;
         const openaiOrgId = process.env.OPENAI_ORG_ID;
         
-        if (!openaiApiKey) {
+        if (!openaiApiKey || openaiApiKey === 'placeholder-add-your-key') {
+            // Return empty usage data when API key is not configured
             context.res = {
-                status: 400,
+                status: 200,
                 body: {
-                    error: "OpenAI API key not configured",
+                    daily: [],
+                    byProject: {},
+                    totalTokens: 0,
+                    totalCost: 0,
                     authenticated: !!userInfo,
-                    user: userInfo?.userDetails || 'anonymous'
+                    user: userInfo?.userDetails || 'anonymous',
+                    message: "OpenAI API key not configured - showing empty usage data"
                 },
                 headers: corsHeaders
             };
