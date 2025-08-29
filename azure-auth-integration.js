@@ -115,11 +115,13 @@ class AzureAuthIntegration {
     // Get Azure metrics using the backend function
     async getAzureMetrics() {
         try {
-            const response = await fetch('/api/GetAzureMetrics', {
+            // Use the standalone Azure Function endpoint
+            const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                mode: 'cors'
             });
             
             if (response.ok) {

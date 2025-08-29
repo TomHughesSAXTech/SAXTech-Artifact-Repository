@@ -211,7 +211,7 @@
       await refreshAllWithCharts();
     });
     
-    const METRICS_API_URL = '/api/GetAzureMetrics';
+    const METRICS_API_URL = 'https://saxtech-metrics-api.azurewebsites.net/api/metrics';
 
     function dollars(v){ return `$${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` }
     function bytes(v){
