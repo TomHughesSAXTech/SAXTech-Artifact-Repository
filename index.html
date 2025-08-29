@@ -2078,10 +2078,18 @@
                 const response = await fetch('/.auth/me');
                 const data = await response.json();
                 
-                // Check if user is authenticated (clientPrincipal exists)
-                if (data && data.length > 0 && data[0]) {
-                    const principal = data[0];
-                    
+                // Handle both array format and object format
+                let principal = null;
+                
+                if (Array.isArray(data) && data.length > 0 && data[0]) {
+                    // Old format: array response
+                    principal = data[0];
+                } else if (data && data.clientPrincipal) {
+                    // New format: object with clientPrincipal
+                    principal = data.clientPrincipal;
+                }
+                
+                if (principal) {
                     // Try to get email from various possible fields
                     let email = principal.userDetails || 
                                principal.userId || 

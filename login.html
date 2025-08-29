@@ -246,7 +246,18 @@
                 
                 if (contentType && contentType.includes('application/json')) {
                     const data = await response.json();
-                    if (data && data.length > 0 && data[0]) {
+                    // Handle both array format and object format
+                    let isAuthenticated = false;
+                    
+                    if (Array.isArray(data) && data.length > 0 && data[0]) {
+                        // Old format: array response
+                        isAuthenticated = true;
+                    } else if (data && data.clientPrincipal) {
+                        // New format: object with clientPrincipal
+                        isAuthenticated = true;
+                    }
+                    
+                    if (isAuthenticated) {
                         // User is already authenticated, redirect to main page
                         window.location.href = 'index.html';
                     }

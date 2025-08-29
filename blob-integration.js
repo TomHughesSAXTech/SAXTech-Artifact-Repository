@@ -13,11 +13,15 @@ async function getUserInfo() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
-            // Azure Static Web Apps returns an array with the auth data
-            if (data && data.length > 0 && data[0]) {
+            // Azure Static Web Apps returns either an array or an object with clientPrincipal
+            if (Array.isArray(data) && data.length > 0 && data[0]) {
+                // Old format: array response
                 return data[0];
+            } else if (data && data.clientPrincipal) {
+                // New format: object with clientPrincipal
+                return data.clientPrincipal;
             }
-            return data.clientPrincipal || null;
+            return null;
         }
         return null;
     } catch (error) {
