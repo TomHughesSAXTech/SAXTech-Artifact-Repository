@@ -292,15 +292,24 @@
         const data = await fetchMetrics();
         metricsData = data; // Store for use in charts
         
-        // costs
-        document.getElementById('cost_mtd').textContent = dollars(data.costs?.monthToDate||0);
-        document.getElementById('cost_daily').textContent = dollars(data.costs?.yesterday||0);
-        document.getElementById('azure_cost_pill').textContent = dollars(data.costs?.monthToDate||0);
-        document.getElementById('azure_cost_pill').dataset.val = String(data.costs?.monthToDate||0);
-        // counts
-        document.getElementById('count_swa').textContent = data.resources?.staticSites||0;
-        document.getElementById('count_func').textContent = data.resources?.functionApps||0;
-        document.getElementById('count_sa').textContent = data.resources?.storageAccounts||0;
+        // costs - Check if costs data exists, otherwise show placeholder
+        if (data.costs) {
+          document.getElementById('cost_mtd').textContent = dollars(data.costs.monthToDate||0);
+          document.getElementById('cost_daily').textContent = dollars(data.costs.yesterday||0);
+          document.getElementById('azure_cost_pill').textContent = dollars(data.costs.monthToDate||0);
+          document.getElementById('azure_cost_pill').dataset.val = String(data.costs.monthToDate||0);
+        } else {
+          // Show placeholder text when cost data is not available
+          document.getElementById('cost_mtd').textContent = 'Loading...';
+          document.getElementById('cost_daily').textContent = 'Loading...';
+          document.getElementById('azure_cost_pill').textContent = 'N/A';
+          document.getElementById('azure_cost_pill').dataset.val = '0';
+        }
+        
+        // counts - Use actual data from API response
+        document.getElementById('count_swa').textContent = data.resources?.staticSites || data.resourceCounts?.staticWebApps || 0;
+        document.getElementById('count_func').textContent = data.resources?.functionApps || data.resourceCounts?.functionApps || 0;
+        document.getElementById('count_sa').textContent = data.resources?.storageAccounts || data.resourceCounts?.storageAccounts || 0;
         // storage list
         const list = document.getElementById('storage_list');
         list.innerHTML = '';
