@@ -116,31 +116,43 @@ class N8NIntegration {
             console.log(`Synced N8N workflow: ${workflowData.name}`);
             return workflowData;
         } catch (error) {
-            console.error('Error syncing N8N workflow:', error);
-            return false;
+            console.error('Error syncing N8N workflow (non-blocking):', error);
+            // Don't block project creation - just log the error
+            console.warn('N8N workflow sync failed due to CORS. The project will be created without workflow sync.');
+            // Return a placeholder object so project creation continues
+            return {
+                error: true,
+                message: 'Workflow sync failed - CORS issue. Project created without workflow data.',
+                workflowId: parsed.workflowId
+            };
         }
     }
     
     // Sync all N8N workflows for a project
     async syncProjectWorkflows(project) {
-        if (!project.n8nWorkflows) return;
+        if (!project.n8nWorkflows) return [];
         
         const results = [];
         
-        // Sync main workflow
-        if (project.n8nWorkflows.main) {
-            const result = await this.syncWorkflowToBlob(project.n8nWorkflows.main, project.id);
-            if (result) results.push(result);
-        }
-        
-        // Sync additional workflows
-        if (project.n8nWorkflows.additional && Array.isArray(project.n8nWorkflows.additional)) {
-            for (const url of project.n8nWorkflows.additional) {
-                if (url.trim()) {
-                    const result = await this.syncWorkflowToBlob(url, project.id);
-                    if (result) results.push(result);
+        try {
+            // Sync main workflow
+            if (project.n8nWorkflows.main) {
+                const result = await this.syncWorkflowToBlob(project.n8nWorkflows.main, project.id);
+                if (result) results.push(result);
+            }
+            
+            // Sync additional workflows
+            if (project.n8nWorkflows.additional && Array.isArray(project.n8nWorkflows.additional)) {
+                for (const url of project.n8nWorkflows.additional) {
+                    if (url.trim()) {
+                        const result = await this.syncWorkflowToBlob(url, project.id);
+                        if (result) results.push(result);
+                    }
                 }
             }
+        } catch (error) {
+            console.error('Error in syncProjectWorkflows (non-blocking):', error);
+            console.warn('Continuing without n8n workflow sync');
         }
         
         return results;
