@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="chart.min.js?v=2"></script>
   <script src="chartjs-plugin-datalabels.min.js?v=2"></script>
-  <script src="azure-integration.js"></script>
+  <script src="azure-auth-integration.js"></script>
   <style>
     :root {
       --bg: #060818; --card: #0f1729; --text: #e2e8f0; --muted: #94a3b8;
@@ -204,8 +204,8 @@
   <script>
     // Initialize Azure integration on page load
     window.addEventListener('DOMContentLoaded', async () => {
-      if (window.azureIntegration) {
-        await window.azureIntegration.initialize();
+      if (window.azureAuthIntegration) {
+        await window.azureAuthIntegration.initialize();
       }
       bindSettings();
       await refreshAllWithCharts();
@@ -246,9 +246,12 @@
     }
 
     async function fetchMetrics(){
-      const resp = await fetch(METRICS_API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ scope: 'subscription', subscriptionId: '3cfb259a-f02a-484e-9ce3-d83c21fd0ddb', resourceGroup: 'SAXTech-AI' }) });
-      if(!resp.ok){ throw new Error(`Metrics HTTP ${resp.status}`); }
-      return await resp.json();
+      // Use the new Azure auth integration to get metrics
+      if (window.azureAuthIntegration && window.azureAuthIntegration.isAuthenticated()) {
+        return await window.azureAuthIntegration.getAzureMetrics();
+      }
+      // Return mock data if not authenticated
+      return window.azureAuthIntegration ? await window.azureAuthIntegration.getAzureMetrics() : {};
     }
 
     function sumMRRFromProjects(){
