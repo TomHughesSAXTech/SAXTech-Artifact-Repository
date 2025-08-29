@@ -6,7 +6,7 @@ const { StorageManagementClient } = require('@azure/arm-storage');
 const { ContainerServiceClient } = require('@azure/arm-containerservice');
 const { MonitorClient } = require('@azure/arm-monitor');
 const { CognitiveServicesManagementClient } = require('@azure/arm-cognitiveservices');
-const { SubscriptionClient } = require('@azure/arm-subscriptions');
+const { ResourceManagementClient } = require('@azure/arm-resources');
 const { TableClient } = require('@azure/data-tables');
 
 // Configuration
@@ -124,8 +124,10 @@ async function fetchCostData() {
                 monthToDate += cost;
                 
                 // Add to historical data
+                // Ensure date is a string before calling replace
+                const dateStr = String(date);
                 historical.push({
-                    date: parseInt(date.replace(/-/g, '')),
+                    date: parseInt(dateStr.replace(/-/g, '')),
                     cost: cost,
                     service: service
                 });
@@ -309,8 +311,15 @@ async function fetchKubernetesMetrics() {
         let totalMemory = 0;
         
         for await (const cluster of aksClient.managedClusters.list()) {
+            // Extract resource group from the cluster ID
+            const resourceGroupName = cluster.id ? cluster.id.split('/')[4] : null;
+            if (!resourceGroupName) {
+                console.log(`Could not extract resource group for cluster ${cluster.name}`);
+                continue;
+            }
+            
             const agentPools = [];
-            for await (const pool of aksClient.agentPools.list(cluster.resourceGroup, cluster.name)) {
+            for await (const pool of aksClient.agentPools.list(resourceGroupName, cluster.name)) {
                 agentPools.push({
                     name: pool.name,
                     count: pool.count || 0,
@@ -322,7 +331,7 @@ async function fetchKubernetesMetrics() {
             clusters.push({
                 name: cluster.name,
                 location: cluster.location,
-                resourceGroup: cluster.resourceGroup,
+                resourceGroup: resourceGroupName,
                 kubernetesVersion: cluster.kubernetesVersion,
                 nodeCount: cluster.agentPoolProfiles ? cluster.agentPoolProfiles.reduce((sum, p) => sum + (p.count || 0), 0) : 0,
                 agentPools: agentPools,
@@ -471,10 +480,10 @@ async function fetchGPTUsage() {
 // Fetch all resource groups
 async function fetchResourceGroups() {
     try {
-        const subscriptionClient = new SubscriptionClient(credential);
+        const resourceClient = new ResourceManagementClient(credential, subscriptionId);
         const resourceGroups = [];
         
-        for await (const rg of subscriptionClient.resourceGroups.list(subscriptionId)) {
+        for await (const rg of resourceClient.resourceGroups.list()) {
             resourceGroups.push({
                 name: rg.name,
                 location: rg.location,
