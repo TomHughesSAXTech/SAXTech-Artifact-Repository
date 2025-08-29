@@ -2079,12 +2079,28 @@
                 const data = await response.json();
                 
                 // Check if user is authenticated (clientPrincipal exists)
-                if (data && data.length > 0 && data[0] && data[0].userDetails) {
-                    // User is authenticated
-                    const email = data[0].userDetails;
-                    const shortEmail = email.length > 20 ? email.substring(0, 17) + '...' : email;
-                    document.getElementById('userEmail').textContent = shortEmail;
-                    document.getElementById('userEmail').title = email;
+                if (data && data.length > 0 && data[0]) {
+                    const principal = data[0];
+                    
+                    // Try to get email from various possible fields
+                    let email = principal.userDetails || 
+                               principal.userId || 
+                               (principal.claims && principal.claims.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val) ||
+                               (principal.claims && principal.claims.find(c => c.typ === 'emails')?.val) ||
+                               (principal.claims && principal.claims.find(c => c.typ === 'preferred_username')?.val) ||
+                               'User';
+                    
+                    if (email && email !== 'User') {
+                        // User is authenticated with email
+                        const shortEmail = email.length > 20 ? email.substring(0, 17) + '...' : email;
+                        document.getElementById('userEmail').textContent = shortEmail;
+                        document.getElementById('userEmail').title = email;
+                    } else {
+                        // User is authenticated but email not found in expected places
+                        console.log('User authenticated but email not found, using fallback');
+                        document.getElementById('userEmail').textContent = 'Authenticated';
+                        document.getElementById('userEmail').title = 'Authenticated User';
+                    }
                 } else {
                     // User is not authenticated - redirect to login
                     console.log('User not authenticated, redirecting to login...');
