@@ -30,8 +30,9 @@ class AzureIntegration {
     async getManagementToken() {
         try {
             // Call your backend API to get Azure management token
-            // This should be implemented as an Azure Function
-            const response = await fetch('/api/GetAzureToken');
+            // Use the deployed Function App URL
+            const functionUrl = 'https://saxtech-metrics-api.azurewebsites.net/api/GetAzureToken';
+            const response = await fetch(functionUrl);
             if (response.ok) {
                 const data = await response.json();
                 this.accessToken = data.accessToken;
@@ -329,7 +330,8 @@ class AzureIntegration {
     async fetchGPTUsage() {
         try {
             // Call your backend API to get OpenAI usage
-            const response = await fetch('/api/GetGPTUsage');
+            const functionUrl = 'https://saxtech-metrics-api.azurewebsites.net/api/GetGPTUsage';
+            const response = await fetch(functionUrl);
             if (response.ok) {
                 const data = await response.json();
                 return data;
