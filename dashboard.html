@@ -426,7 +426,24 @@
             </div>
           `;
         });
+        
+        // Add top resources by cost
+        if (metricsData.costs.resourceCosts && metricsData.costs.resourceCosts.length > 0) {
+          html += '<h3 style="margin-top: 20px;">Top Resources by Cost</h3>';
+          metricsData.costs.resourceCosts.slice(0, 10).forEach(resource => {
+            html += `
+              <div class="breakdown-item">
+                <div>
+                  <div class="breakdown-label">${resource.name}</div>
+                  <div class="breakdown-meta">${resource.service}</div>
+                </div>
+                <div class="breakdown-value">$${resource.totalCost.toFixed(2)}</div>
+              </div>
+            `;
+          });
+        }
       } else {
+        // Yesterday's detailed breakdown
         html = '<h3>Yesterday\'s Cost Details</h3>';
         html += `
           <div class="breakdown-item">
@@ -434,6 +451,41 @@
             <div class="breakdown-value">$${metricsData.costs.yesterday.toFixed(2)}</div>
           </div>
         `;
+        
+        // Service breakdown for yesterday
+        if (metricsData.costs.yesterdayDetails && metricsData.costs.yesterdayDetails.services) {
+          html += '<h3 style="margin-top: 20px;">Breakdown by Service</h3>';
+          const services = metricsData.costs.yesterdayDetails.services;
+          const sorted = Object.entries(services).sort((a, b) => b[1] - a[1]);
+          
+          sorted.forEach(([service, cost]) => {
+            if (cost > 0) {
+              html += `
+                <div class="breakdown-item">
+                  <div class="breakdown-label">${service}</div>
+                  <div class="breakdown-value">$${cost.toFixed(2)}</div>
+                </div>
+              `;
+            }
+          });
+        }
+        
+        // Resource breakdown for yesterday
+        if (metricsData.costs.yesterdayDetails && metricsData.costs.yesterdayDetails.resources && 
+            metricsData.costs.yesterdayDetails.resources.length > 0) {
+          html += '<h3 style="margin-top: 20px;">Resources Used Yesterday</h3>';
+          metricsData.costs.yesterdayDetails.resources.slice(0, 20).forEach(resource => {
+            html += `
+              <div class="breakdown-item">
+                <div>
+                  <div class="breakdown-label">${resource.name}</div>
+                  <div class="breakdown-meta">${resource.service}</div>
+                </div>
+                <div class="breakdown-value">$${resource.cost.toFixed(2)}</div>
+              </div>
+            `;
+          });
+        }
       }
       
       body.innerHTML = html;
@@ -955,6 +1007,69 @@
         });
       }
       
+      // GPT daily usage trend chart
+      if (data.openAIUsage && data.openAIUsage.dailyUsage && data.openAIUsage.dailyUsage.length > 0) {
+        const ctx = document.getElementById('tokenUsageChart').getContext('2d');
+        const dailyUsage = data.openAIUsage.dailyUsage;
+        
+        if (charts.tokenUsage) charts.tokenUsage.destroy();
+        
+        charts.tokenUsage = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: dailyUsage.map(d => {
+              const date = new Date(d.date);
+              return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+            }),
+            datasets: [{
+              label: 'Daily Token Usage',
+              data: dailyUsage.map(d => d.tokens),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.parsed.y.toLocaleString() + ' tokens';
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    if (value >= 1000000) {
+                      return (value / 1000000).toFixed(1) + 'M';
+                    } else if (value >= 1000) {
+                      return (value / 1000).toFixed(0) + 'K';
+                    }
+                    return value;
+                  }
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+      }
+      
       // GPT model usage chart
       if (data.openAIUsage && data.openAIUsage.modelUsage) {
         const ctx = document.getElementById('tokenModelChart').getContext('2d');
@@ -974,7 +1089,10 @@
                 '#7c3aed',
                 '#10b981',
                 '#f59e0b',
-                '#ef4444'
+                '#ef4444',
+                '#ec4899',
+                '#8b5cf6',
+                '#06b6d4'
               ]
             }]
           },
@@ -983,7 +1101,24 @@
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                position: 'bottom'
+                position: 'bottom',
+                labels: {
+                  padding: 10,
+                  font: {
+                    size: 11
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return `${label}: ${value.toLocaleString()} tokens (${percentage}%)`;
+                  }
+                }
               }
             }
           }
