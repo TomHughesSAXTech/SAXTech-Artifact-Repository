@@ -239,9 +239,13 @@
       document.getElementById('net_value').textContent = dollars(net);
     }
 
+    let metricsData = null; // Store metrics data globally for use in charts
+    
     async function refreshAll(){
       try{
         const data = await fetchMetrics();
+        metricsData = data; // Store for use in charts
+        
         // costs
         document.getElementById('cost_mtd').textContent = dollars(data.costs?.monthToDate||0);
         document.getElementById('cost_daily').textContent = dollars(data.costs?.yesterday||0);
@@ -276,18 +280,27 @@
       try {
         const ctx = document.getElementById('costTrendChart').getContext('2d');
         
-        // Generate sample data for last 30 days (replace with actual API call when available)
-        const days = 30;
+        // Use real historical cost data from API
         const labels = [];
         const data = [];
-        const today = new Date();
         
-        for(let i = days - 1; i >= 0; i--){
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-          // Simulated data - replace with actual cost data from Azure API
-          data.push(Math.random() * 50 + 20 + (30-i) * 0.5); // Trending upward slightly
+        if (metricsData && metricsData.costs && metricsData.costs.historical && metricsData.costs.historical.length > 0) {
+          // Use real data from API
+          for (const dayData of metricsData.costs.historical) {
+            const date = new Date(dayData.date);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            data.push(dayData.cost);
+          }
+        } else {
+          // Fallback if no data available
+          console.log('No historical cost data available, showing placeholder');
+          const today = new Date();
+          for(let i = 29; i >= 0; i--){
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            data.push(0);
+          }
         }
         
         if(costChart) costChart.destroy();
@@ -374,34 +387,69 @@
     async function loadTrafficMetrics(){
       try {
         const tbody = document.getElementById('trafficMetricsBody');
-        const projects = (window.blobManager && window.blobManager.getProjects()) || JSON.parse(localStorage.getItem('saxtech_projects')||'[]');
         
-        if(projects.length === 0){
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted);">No projects found</td></tr>';
-          return;
-        }
-        
-        tbody.innerHTML = '';
-        
-        for(const project of projects){
-          const row = document.createElement('tr');
+        // Check if we have project metrics from the API
+        if (metricsData && metricsData.projectMetrics && metricsData.projectMetrics.length > 0) {
+          tbody.innerHTML = '';
           
-          // Generate sample metrics (replace with actual data from Azure)
-          const traffic = Math.floor(Math.random() * 10000 + 1000);
-          const bandwidth = Math.random() * 500 + 50;
-          const storage = Math.random() * 1024 + 100;
-          const lastActivity = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+          // Use real project metrics from API
+          for(const metric of metricsData.projectMetrics){
+            const row = document.createElement('tr');
+            
+            // Format bandwidth from bytes to GB
+            const bandwidthGB = (metric.bandwidth || 0) / (1024 * 1024 * 1024);
+            
+            // Format last activity date
+            const lastActivityDate = metric.lastActivity 
+              ? new Date(metric.lastActivity).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              : 'No activity';
+            
+            row.innerHTML = `
+              <td><span class="project-link" onclick="selectProject('${metric.projectId}')">${metric.projectName}</span></td>
+              <td><span class="pill">${metric.status || 'Active'}</span></td>
+              <td class="traffic-value">${(metric.monthlyRequests || 0).toLocaleString()} requests</td>
+              <td><span class="bandwidth-badge">${bandwidthGB.toFixed(2)} GB</span></td>
+              <td>${bytes(metric.storageSize || 0)}</td>
+              <td class="muted">${lastActivityDate}</td>
+            `;
+            
+            tbody.appendChild(row);
+          }
           
-          row.innerHTML = `
-            <td><span class="project-link" onclick="selectProject('${project.id}')">${project.name}</span></td>
-            <td><span class="pill">${project.status || 'Active'}</span></td>
-            <td class="traffic-value">${traffic.toLocaleString()} requests</td>
-            <td><span class="bandwidth-badge">${bandwidth.toFixed(2)} GB</span></td>
-            <td>${bytes(storage * 1024 * 1024)}</td>
-            <td class="muted">${lastActivity.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-          `;
+          if(metricsData.projectMetrics.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted);">No project metrics available</td></tr>';
+          }
+        } else {
+          // Fallback to local projects if no metrics from API
+          const projects = (window.blobManager && window.blobManager.getProjects()) || JSON.parse(localStorage.getItem('saxtech_projects')||'[]');
           
-          tbody.appendChild(row);
+          if(projects.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted);">No projects found</td></tr>';
+            return;
+          }
+          
+          tbody.innerHTML = '';
+          
+          // Show projects with placeholder metrics
+          for(const project of projects){
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+              <td><span class="project-link" onclick="selectProject('${project.id}')">${project.name}</span></td>
+              <td><span class="pill">${project.status || 'Active'}</span></td>
+              <td class="traffic-value">0 requests</td>
+              <td><span class="bandwidth-badge">0.00 GB</span></td>
+              <td>0 B</td>
+              <td class="muted">No data</td>
+            `;
+            
+            tbody.appendChild(row);
+          }
         }
       } catch(err) {
         console.error('Error loading traffic metrics:', err);
