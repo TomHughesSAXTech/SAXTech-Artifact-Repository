@@ -248,10 +248,22 @@
     async function fetchMetrics(){
       // Use the new Azure auth integration to get metrics
       if (window.azureAuthIntegration && window.azureAuthIntegration.isAuthenticated()) {
-        return await window.azureAuthIntegration.getAzureMetrics();
+        const result = await window.azureAuthIntegration.getAzureMetrics();
+        // Don't return null/empty results
+        if (result && Object.keys(result).length > 0) {
+          return result;
+        }
+        console.warn('Empty result from getAzureMetrics, keeping existing data');
+        return null;
       }
-      // Return mock data if not authenticated
-      return window.azureAuthIntegration ? await window.azureAuthIntegration.getAzureMetrics() : {};
+      // Try even if not authenticated (API might be public)
+      if (window.azureAuthIntegration) {
+        const result = await window.azureAuthIntegration.getAzureMetrics();
+        if (result && Object.keys(result).length > 0) {
+          return result;
+        }
+      }
+      return null;
     }
 
     function sumMRRFromProjects(){
@@ -291,6 +303,13 @@
       try{
         const data = await fetchMetrics();
         console.log('Fetched metrics data:', data);
+        
+        // Only update if we actually got data - don't clear existing data on error
+        if (!data || Object.keys(data).length === 0) {
+          console.warn('No data received from API, keeping existing data');
+          return;
+        }
+        
         metricsData = data; // Store for use in charts
         
         // costs - Check if costs data exists, otherwise show placeholder
@@ -299,8 +318,8 @@
           document.getElementById('cost_daily').textContent = dollars(data.costs.yesterday||0);
           document.getElementById('azure_cost_pill').textContent = dollars(data.costs.monthToDate||0);
           document.getElementById('azure_cost_pill').dataset.val = String(data.costs.monthToDate||0);
-        } else {
-          // Show placeholder text when cost data is not available
+        } else if (!metricsData || !metricsData.costs) {
+          // Only clear if we don't have any previous data either
           document.getElementById('cost_mtd').textContent = '$0.00';
           document.getElementById('cost_daily').textContent = '$0.00';
           document.getElementById('azure_cost_pill').textContent = '$0.00';

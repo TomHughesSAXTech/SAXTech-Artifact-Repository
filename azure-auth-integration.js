@@ -176,8 +176,8 @@ class AzureAuthIntegration {
         } catch (error) {
             console.error('Error fetching Azure metrics:', error);
             console.error('Error details:', error.message, error.stack);
-            // DON'T return mock data - return empty object to show real issue  
-            return {};
+            // Return null to indicate error, not empty object
+            return null;
         }
     }
     
