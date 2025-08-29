@@ -499,17 +499,30 @@
       const body = document.getElementById('resourceBreakdownBody');
       const resources = metricsData.resourceDetails[type] || [];
       
-      let html = `<h3>${type === 'staticSites' ? 'Static Web Apps' : 'Function Apps'}</h3>`;
+      let html = `<h3>${type === 'staticSites' ? 'Static Web Apps' : type === 'functionApps' ? 'Function Apps' : 'Storage Accounts'}</h3>`;
       
       if (resources.length === 0) {
         html += '<p class="muted">No resources found</p>';
       } else {
         resources.forEach(resource => {
+          // Calculate monthly cost for Static Web Apps
+          let monthlyCost = 0;
+          if (type === 'staticSites') {
+            monthlyCost = resource.sku === 'Standard' ? 9.00 : 0;
+          }
+          
           html += `
             <div class="resource-card">
               <div class="resource-header">
                 <div class="resource-name">${resource.name}</div>
-                <div class="resource-cost">$${(resource.cost || 0).toFixed(2)}</div>
+                <div class="resource-cost">
+                  ${type === 'staticSites' ? `
+                    <span class="status-badge ${resource.sku === 'Standard' ? 'warning' : 'active'}">${resource.sku || 'Free'}</span>
+                    ${monthlyCost > 0 ? `<span style="margin-left: 8px;">$${monthlyCost.toFixed(2)}/mo</span>` : ''}
+                  ` : type === 'functionApps' ? `
+                    <span class="status-badge active">${resource.osType || 'Windows'}</span>
+                  ` : ''}
+                </div>
               </div>
               <div class="resource-details">
                 <div class="resource-detail">
@@ -526,6 +539,31 @@
                     <a href="${resource.endpoint}" target="_blank" class="resource-endpoint">${resource.endpoint}</a>
                   </div>
                 </div>
+                ${resource.customDomains && resource.customDomains.length > 0 ? `
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Custom Domains:</div>
+                  <div class="resource-detail-value">
+                    ${resource.customDomains.map(domain => 
+                      `<a href="https://${domain}" target="_blank" class="resource-endpoint">${domain}</a>`
+                    ).join('<br>')}
+                  </div>
+                </div>
+                ` : ''}
+                ${type === 'functionApps' ? `
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Runtime:</div>
+                  <div class="resource-detail-value">${resource.runtime || 'N/A'}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Functions:</div>
+                  <div class="resource-detail-value">
+                    ${resource.functionCount || 0} function(s)
+                    ${resource.functions && resource.functions.length > 0 ? 
+                      '<br>' + resource.functions.map(f => `• ${f.name}`).join('<br>') : 
+                      ''}
+                  </div>
+                </div>
+                ` : ''}
                 ${resource.createdTime ? `
                 <div class="resource-detail">
                   <div class="resource-detail-label">Created:</div>
