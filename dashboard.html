@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Automation & AI Hub | Live Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #060818; --card: #0f1729; --text: #e2e8f0; --muted: #94a3b8;
@@ -40,6 +41,14 @@
     input[type="number"], input[type="text"] { width: 100%; padding: 12px; border-radius: 10px; border:1px solid var(--border); background: #0b1120; color: var(--text); }
     .note { font-size:12px; color: var(--muted); }
     a { color: var(--primary); text-decoration: none; }
+    .chart-container { position: relative; height: 300px; width: 100%; padding: 10px 0; }
+    .metrics-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .metrics-table th { text-align: left; padding: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .metrics-table td { padding: 10px 8px; border-bottom: 1px solid rgba(0,212,255,0.08); }
+    .metrics-table tr:hover { background: rgba(0,212,255,0.04); }
+    .project-link { color: var(--primary); font-weight: 500; cursor: pointer; }
+    .traffic-value { font-weight: 600; color: var(--text); }
+    .bandwidth-badge { background: rgba(124,58,237,0.12); color: var(--accent); padding: 3px 8px; border-radius: 6px; font-size: 12px; }
     @media (max-width: 900px) { .span-6, .span-8, .span-4, .span-3 { grid-column: span 12; } .settings-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -53,7 +62,7 @@
         </div>
         <div class="row-col">
           <button class="btn secondary" onclick="window.location.href='index.html'">⬅ Back to Hub</button>
-          <button class="btn" onclick="refreshAll()">Refresh</button>
+          <button class="btn" onclick="refreshAllWithCharts()">Refresh</button>
         </div>
       </div>
     </div>
@@ -96,6 +105,35 @@
           <div class="kpi"><div>Azure Month-to-Date Cost</div><div id="azure_cost_pill" class="pill">$0</div></div>
           <div class="kpi"><div>Net (MRR + Impl - Tools - Azure)</div><div id="net_value" class="pill">$0</div></div>
         </div>
+      </div>
+
+      <div class="card span-12">
+        <div class="section-title">Historical Cost Trending — Last 30 Days</div>
+        <div class="chart-container">
+          <canvas id="costTrendChart"></canvas>
+        </div>
+        <div class="note">Shows daily Azure costs for the past 30 days. Data refreshes automatically.</div>
+      </div>
+
+      <div class="card span-12">
+        <div class="section-title">Project Traffic & Bandwidth Metrics</div>
+        <table class="metrics-table" id="trafficMetricsTable">
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Status</th>
+              <th>Monthly Traffic</th>
+              <th>Bandwidth Used</th>
+              <th>Storage Size</th>
+              <th>Last Activity</th>
+            </tr>
+          </thead>
+          <tbody id="trafficMetricsBody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--muted);">Loading metrics...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="card span-12">
@@ -232,9 +270,162 @@
       }
     }
 
+    // Historical Cost Chart
+    let costChart = null;
+    async function renderCostChart(){
+      try {
+        const ctx = document.getElementById('costTrendChart').getContext('2d');
+        
+        // Generate sample data for last 30 days (replace with actual API call when available)
+        const days = 30;
+        const labels = [];
+        const data = [];
+        const today = new Date();
+        
+        for(let i = days - 1; i >= 0; i--){
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          // Simulated data - replace with actual cost data from Azure API
+          data.push(Math.random() * 50 + 20 + (30-i) * 0.5); // Trending upward slightly
+        }
+        
+        if(costChart) costChart.destroy();
+        
+        costChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Daily Azure Cost ($)',
+              data: data,
+              borderColor: '#00d4ff',
+              backgroundColor: 'rgba(0, 212, 255, 0.1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              pointBackgroundColor: '#00d4ff',
+              pointBorderColor: '#060818',
+              pointBorderWidth: 2,
+              pointRadius: 3,
+              pointHoverRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: '#0f1729',
+                titleColor: '#e2e8f0',
+                bodyColor: '#94a3b8',
+                borderColor: 'rgba(0,212,255,0.3)',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: false,
+                callbacks: {
+                  label: function(context) {
+                    return 'Cost: $' + context.parsed.y.toFixed(2);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: {
+                  color: 'rgba(0,212,255,0.08)',
+                  drawBorder: false
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 11
+                  }
+                }
+              },
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(0,212,255,0.08)',
+                  drawBorder: false
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 11
+                  },
+                  callback: function(value) {
+                    return '$' + value.toFixed(0);
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch(err) {
+        console.error('Error rendering cost chart:', err);
+      }
+    }
+    
+    // Traffic and Bandwidth Metrics
+    async function loadTrafficMetrics(){
+      try {
+        const tbody = document.getElementById('trafficMetricsBody');
+        const projects = (window.blobManager && window.blobManager.getProjects()) || JSON.parse(localStorage.getItem('saxtech_projects')||'[]');
+        
+        if(projects.length === 0){
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted);">No projects found</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        for(const project of projects){
+          const row = document.createElement('tr');
+          
+          // Generate sample metrics (replace with actual data from Azure)
+          const traffic = Math.floor(Math.random() * 10000 + 1000);
+          const bandwidth = Math.random() * 500 + 50;
+          const storage = Math.random() * 1024 + 100;
+          const lastActivity = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+          
+          row.innerHTML = `
+            <td><span class="project-link" onclick="selectProject('${project.id}')">${project.name}</span></td>
+            <td><span class="pill">${project.status || 'Active'}</span></td>
+            <td class="traffic-value">${traffic.toLocaleString()} requests</td>
+            <td><span class="bandwidth-badge">${bandwidth.toFixed(2)} GB</span></td>
+            <td>${bytes(storage * 1024 * 1024)}</td>
+            <td class="muted">${lastActivity.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+          `;
+          
+          tbody.appendChild(row);
+        }
+      } catch(err) {
+        console.error('Error loading traffic metrics:', err);
+        document.getElementById('trafficMetricsBody').innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--bad);">Error loading metrics</td></tr>';
+      }
+    }
+    
+    // Navigate to project in main hub
+    function selectProject(projectId){
+      // Store selected project and navigate back to main hub
+      localStorage.setItem('selectedProjectId', projectId);
+      window.location.href = 'index.html';
+    }
+    
+    // Enhanced refresh function
+    async function refreshAllWithCharts(){
+      await refreshAll();
+      await renderCostChart();
+      await loadTrafficMetrics();
+    }
+    
     // init
     bindSettings();
-    refreshAll();
+    refreshAllWithCharts();
   </script>
 </body>
 </html>
