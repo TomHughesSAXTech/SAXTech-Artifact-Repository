@@ -839,11 +839,19 @@
 
     // Update metrics display
     function updateMetrics(data) {
-      // Cost metrics
-      if (data.costs) {
+      // Cost metrics - handle null values
+      if (data.costs && data.costs.monthToDate !== null && data.costs.monthToDate !== undefined) {
         document.getElementById('cost_mtd').textContent = `$${data.costs.monthToDate.toFixed(2)}`;
-        document.getElementById('cost_daily').textContent = `$${data.costs.yesterday.toFixed(2)}`;
         document.getElementById('azure_cost_pill').textContent = `$${data.costs.monthToDate.toFixed(2)}`;
+      } else {
+        document.getElementById('cost_mtd').textContent = '$0.00';
+        document.getElementById('azure_cost_pill').textContent = '$0.00';
+      }
+      
+      if (data.costs && data.costs.yesterday !== null && data.costs.yesterday !== undefined) {
+        document.getElementById('cost_daily').textContent = `$${data.costs.yesterday.toFixed(2)}`;
+      } else {
+        document.getElementById('cost_daily').textContent = '$0.00';
       }
       
       // Resource counts
@@ -853,11 +861,37 @@
         document.getElementById('count_sa').textContent = data.resources.storageAccounts || 0;
       }
       
-      // Kubernetes
-      if (data.kubernetes) {
+      // Kubernetes - display full details
+      if (data.kubernetes && data.kubernetes.clusterCount > 0) {
         document.getElementById('k8s_count').textContent = data.kubernetes.clusterCount || 0;
         document.getElementById('k8s_nodes').textContent = data.kubernetes.totalNodes || 0;
         document.getElementById('k8s_cpu').textContent = `${data.kubernetes.avgCpuUsage || 0}%`;
+        
+        // Display first cluster details if available
+        if (data.kubernetes.clusters && data.kubernetes.clusters.length > 0) {
+          const cluster = data.kubernetes.clusters[0];
+          // Update the Kubernetes card with more info
+          const k8sCard = document.querySelector('.metric-card:has(#k8s_count)');
+          if (k8sCard) {
+            const existingInfo = k8sCard.querySelector('.cluster-info');
+            if (existingInfo) {
+              existingInfo.remove();
+            }
+            const clusterInfo = document.createElement('div');
+            clusterInfo.className = 'cluster-info';
+            clusterInfo.style.cssText = 'margin-top: 10px; font-size: 12px; color: #94a3b8;';
+            clusterInfo.innerHTML = `
+              <div>Cluster: ${cluster.name}</div>
+              <div>Version: ${cluster.kubernetesVersion}</div>
+              <div>Memory: ${cluster.memoryUsage ? cluster.memoryUsage.toFixed(1) + '%' : 'N/A'}</div>
+            `;
+            k8sCard.appendChild(clusterInfo);
+          }
+        }
+      } else {
+        document.getElementById('k8s_count').textContent = '0';
+        document.getElementById('k8s_nodes').textContent = '0';
+        document.getElementById('k8s_cpu').textContent = '0%';
       }
       
       // Backup status
