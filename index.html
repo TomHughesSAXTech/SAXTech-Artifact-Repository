@@ -858,9 +858,10 @@
                         <div class="stat-number" id="clientCount">0</div>
                         <div class="stat-label">Client Partners</div>
                     </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; position: relative;">
                         <div class="stat-number" id="userEmail" style="font-size: 14px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Loading...</div>
                         <div class="stat-label" style="color: rgba(255,255,255,0.95); font-weight: 600;">Logged In</div>
+                        <button onclick="logout()" style="position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;">Logout</button>
                     </div>
                 </div>
             </div>
@@ -909,6 +910,22 @@
             <button class="btn btn-secondary" onclick="window.open('https://portal.azure.com', '_blank')">
                 <span class="btn-icon">☁️</span>
                 Azure Portal
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://help.saxtechnology.com', '_blank')">
+                <span class="btn-icon">📚</span>
+                CloudRadial
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://sax.pia.ai/r/', '_blank')">
+                <span class="btn-icon">⚡</span>
+                PIA Admin
+            </button>
+            <button class="btn btn-secondary" onclick="window.open('https://sax.forms.pia.ai/r', '_blank')">
+                <span class="btn-icon">📝</span>
+                PIA Forms
+            </button>
+            <button class="btn btn-secondary" onclick="syncN8NWorkflows()" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff9558 100%);">
+                <span class="btn-icon">🔄</span>
+                Sync N8N Workflows
             </button>
         </div>
 
@@ -1544,6 +1561,106 @@
                 }
             }
         });
+        
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // For Azure Static Web Apps authentication
+                window.location.href = '/.auth/logout';
+            }
+        }
+        
+        // N8N Workflow Sync function
+        async function syncN8NWorkflows() {
+            const n8nApiKey = localStorage.getItem('n8n_api_key');
+            const n8nUrl = localStorage.getItem('n8n_url') || 'https://workflows.saxtechnology.com';
+            
+            if (!n8nApiKey) {
+                const key = prompt('Please enter your N8N API Key:');
+                if (key) {
+                    localStorage.setItem('n8n_api_key', key);
+                    syncN8NWorkflows(); // Retry with the new key
+                }
+                return;
+            }
+            
+            showToast('Syncing N8N workflows...', 'info');
+            
+            try {
+                // Fetch workflows from N8N API
+                const response = await fetch(`${n8nUrl}/api/v1/workflows`, {
+                    headers: {
+                        'X-N8N-API-KEY': n8nApiKey,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('n8n_api_key');
+                        showToast('Invalid API key. Please try again.', 'error');
+                        syncN8NWorkflows(); // Retry to prompt for new key
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const workflows = await response.json();
+                
+                // Process and store workflows
+                let savedCount = 0;
+                for (const workflow of workflows.data) {
+                    // Find or create project for this workflow
+                    let project = projects.find(p => p.name === workflow.name || p.n8nWorkflowId === workflow.id);
+                    
+                    if (!project) {
+                        // Create new project for this workflow
+                        project = {
+                            id: Date.now() + savedCount,
+                            name: workflow.name,
+                            client: 'N8N Workflow',
+                            type: 'Standard Automation',
+                            status: workflow.active ? 'Live in Production' : 'Design',
+                            description: `N8N Workflow: ${workflow.name}`,
+                            n8nWorkflowId: workflow.id,
+                            artifacts: [],
+                            created: new Date().toISOString()
+                        };
+                        projects.push(project);
+                    }
+                    
+                    // Add workflow JSON as artifact
+                    const artifactExists = project.artifacts.some(a => a.name === `${workflow.name}.json`);
+                    if (!artifactExists) {
+                        project.artifacts.push({
+                            name: `${workflow.name}.json`,
+                            type: 'N8N',
+                            icon: '⚙️',
+                            size: 'N8N Workflow',
+                            uploadDate: new Date().toISOString(),
+                            n8nId: workflow.id
+                        });
+                    }
+                    
+                    savedCount++;
+                }
+                
+                // Save to blob storage
+                if (window.blobManager && savedCount > 0) {
+                    window.blobManager.projects = projects;
+                    await window.blobManager.saveProjectsToBlob();
+                    window.blobManager.saveProjectsToLocalStorage();
+                }
+                
+                updateStats();
+                renderProjects();
+                showToast(`Successfully synced ${savedCount} N8N workflows!`);
+                
+            } catch (error) {
+                console.error('Error syncing N8N workflows:', error);
+                showToast('Failed to sync N8N workflows. Please check your API key and try again.', 'error');
+            }
+        }
     </script>
 </body>
 </html>
