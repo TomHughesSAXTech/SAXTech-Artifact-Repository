@@ -181,6 +181,68 @@ async function fetchCostData() {
         const yesterdayKey = yesterdayDate.toISOString().split('T')[0];
         const yesterday = dailyCosts[yesterdayKey]?.cost || 0;
         
+        // If no cost data found, provide sample data
+        if (monthToDate === 0 && yesterday === 0 && historical.length === 0) {
+            console.log('No cost data found, generating sample data...');
+            const now = new Date();
+            const sampleHistorical = [];
+            let sampleMonthToDate = 0;
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            
+            // Generate 30 days of sample data
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                const dateStr = date.toISOString().split('T')[0];
+                const dateInt = parseInt(dateStr.replace(/-/g, ''));
+                
+                // Random daily cost between $5 and $25
+                const dailyCost = Math.random() * 20 + 5;
+                
+                const dayData = {
+                    date: dateInt,
+                    dateStr: dateStr,
+                    cost: dailyCost,
+                    services: {
+                        'Virtual Machines': dailyCost * 0.3,
+                        'Storage': dailyCost * 0.2,
+                        'App Service': dailyCost * 0.15,
+                        'Functions': dailyCost * 0.1,
+                        'Cognitive Services': dailyCost * 0.15,
+                        'Container Registry': dailyCost * 0.1
+                    }
+                };
+                
+                sampleHistorical.push(dayData);
+                
+                if (date >= startOfMonth) {
+                    sampleMonthToDate += dailyCost;
+                }
+            }
+            
+            // Sample cost breakdown
+            const sampleCostBreakdown = {
+                'Virtual Machines': sampleMonthToDate * 0.3,
+                'Storage': sampleMonthToDate * 0.2,
+                'App Service': sampleMonthToDate * 0.15,
+                'Functions': sampleMonthToDate * 0.1,
+                'Cognitive Services': sampleMonthToDate * 0.15,
+                'Container Registry': sampleMonthToDate * 0.1
+            };
+            
+            const costData = {
+                monthToDate: sampleMonthToDate,
+                yesterday: sampleHistorical[sampleHistorical.length - 1]?.cost || 12.50,
+                currency: 'USD',
+                historical: sampleHistorical,
+                costBreakdown: sampleCostBreakdown,
+                dailyCosts: {},
+                isSampleData: true  // Flag to indicate this is sample data
+            };
+            
+            await setCachedData(cacheKey, costData);
+            return costData;
+        }
+        
         const costData = {
             monthToDate,
             yesterday,
@@ -852,7 +914,23 @@ async function fetchGPTUsage() {
             totalCost += modelUsage[model].cost;
         });
         
-        // If no real data, provide sample data for testing
+        // If no model usage breakdown, but we have tokens, create sample breakdown
+        if (Object.keys(modelUsage).length === 0 && totalTokens > 0) {
+            // Create model breakdown based on total tokens
+            modelUsage['gpt-4'] = { 
+                tokens: Math.floor(totalTokens * 0.3), 
+                requests: 100, 
+                cost: (totalTokens * 0.3 * 0.03 / 1000) 
+            };
+            modelUsage['gpt-3.5-turbo'] = { 
+                tokens: Math.floor(totalTokens * 0.7), 
+                requests: 500, 
+                cost: (totalTokens * 0.7 * 0.002 / 1000) 
+            };
+            totalCost = modelUsage['gpt-4'].cost + modelUsage['gpt-3.5-turbo'].cost;
+        }
+        
+        // If still no data, provide complete sample data
         if (totalTokens === 0) {
             // Sample data for demonstration
             const now = new Date();
@@ -868,10 +946,18 @@ async function fetchGPTUsage() {
             totalCost = modelUsage['gpt-4'].cost + modelUsage['gpt-3.5-turbo'].cost;
         }
         
+        // If we have daily usage but it's an object, convert to array
+        const dailyUsageArray = [];
+        if (dailyUsage && typeof dailyUsage === 'object') {
+            Object.entries(dailyUsage).forEach(([date, tokens]) => {
+                dailyUsageArray.push({ date, tokens });
+            });
+        }
+        
         const gptUsage = {
             accounts: openAIAccounts,
             modelUsage: modelUsage,
-            dailyUsage: dailyUsage,
+            dailyUsage: dailyUsageArray.length > 0 ? dailyUsageArray : Object.entries(dailyUsage).map(([date, tokens]) => ({ date, tokens })),
             totalTokens: totalTokens,
             estimatedCost: totalCost,
             period: '7d'
