@@ -9,6 +9,7 @@ const { CognitiveServicesManagementClient } = require('@azure/arm-cognitiveservi
 const { ResourceManagementClient } = require('@azure/arm-resources');
 const { RecoveryServicesBackupClient } = require('@azure/arm-recoveryservicesbackup');
 const { RecoveryServicesClient } = require('@azure/arm-recoveryservices');
+const { WebSiteManagementClient } = require('@azure/arm-appservice');
 const { TableClient } = require('@azure/data-tables');
 const { BlobServiceClient: StorageBlobClient } = require('@azure/storage-blob');
 
@@ -183,84 +184,147 @@ async function fetchCostData() {
     }
 }
 
-// FIXED: Resource counting with proper queries
+// FIXED: Using Resource Management API instead of Resource Graph
 async function fetchResourceCounts() {
     try {
-        const graphClient = new ResourceGraphClient(credential);
-        
-        // More comprehensive resource query
-        const query = {
-            subscriptions: [subscriptionId],
-            query: `
-                Resources
-                | where subscriptionId =~ '${subscriptionId}'
-                | project name, type, location, resourceGroup, id, kind, properties, tags
-                | limit 1000
-            `
-        };
-        
-        const result = await graphClient.resources(query);
+        const resourceClient = new ResourceManagementClient(credential, subscriptionId);
+        const webClient = new WebSiteManagementClient(credential, subscriptionId);
+        const storageClient = new StorageManagementClient(credential, subscriptionId);
         
         let staticSites = 0;
         let functionApps = 0;
         let storageAccounts = 0;
+        let totalResources = 0;
         const resourceDetails = {
             staticSites: [],
             functionApps: [],
             storageAccounts: []
         };
         
-        if (result.data && result.data.length > 0) {
-            result.data.forEach(resource => {
-                const type = resource.type?.toLowerCase() || '';
+        // Fetch all resources using Resource Management API
+        console.log('Fetching resources using Resource Management API...');
+        
+        // Method 1: Try using WebSiteManagementClient for web resources
+        try {
+            // Get Static Web Apps
+            for await (const staticSite of webClient.staticSites.list()) {
+                staticSites++;
+                resourceDetails.staticSites.push({
+                    name: staticSite.name,
+                    location: staticSite.location,
+                    resourceGroup: staticSite.id?.split('/')[4] || 'unknown',
+                    id: staticSite.id,
+                    endpoint: staticSite.defaultHostname ? 
+                        `https://${staticSite.defaultHostname}` : 
+                        `https://${staticSite.name}.azurestaticapps.net`,
+                    properties: staticSite,
+                    tags: staticSite.tags || {},
+                    createdTime: staticSite.systemData?.createdAt
+                });
+            }
+            console.log(`Found ${staticSites} static web apps`);
+            
+            // Get all Web Apps (includes Function Apps)
+            for await (const site of webClient.webApps.list()) {
+                totalResources++;
+                const kind = (site.kind || '').toLowerCase();
+                if (kind.includes('functionapp')) {
+                    functionApps++;
+                    resourceDetails.functionApps.push({
+                        name: site.name,
+                        location: site.location,
+                        resourceGroup: site.id?.split('/')[4] || 'unknown',
+                        id: site.id,
+                        kind: site.kind,
+                        endpoint: site.defaultHostName ? 
+                            `https://${site.defaultHostName}` : 
+                            `https://${site.name}.azurewebsites.net`,
+                        state: site.state,
+                        properties: site,
+                        tags: site.tags || {},
+                        createdTime: site.systemData?.createdAt
+                    });
+                }
+            }
+            console.log(`Found ${functionApps} function apps`);
+        } catch (webError) {
+            console.log('Error fetching web resources:', webError.message);
+        }
+        
+        // Method 2: Fallback to generic resource listing
+        if (staticSites === 0 && functionApps === 0) {
+            console.log('Trying fallback method with generic resource listing...');
+            for await (const resource of resourceClient.resources.list()) {
+                totalResources++;
+                const type = (resource.type || '').toLowerCase();
+                const kind = (resource.kind || '').toLowerCase();
                 
-                if (type === 'microsoft.web/staticsites') {
+                if (type === 'microsoft.web/staticsites' && !resourceDetails.staticSites.find(s => s.id === resource.id)) {
                     staticSites++;
                     resourceDetails.staticSites.push({
                         name: resource.name,
                         location: resource.location,
-                        resourceGroup: resource.resourceGroup,
+                        resourceGroup: resource.id?.split('/')[4] || 'unknown',
                         id: resource.id,
                         endpoint: `https://${resource.name}.azurestaticapps.net`,
-                        properties: resource.properties,
+                        properties: resource.properties || {},
                         tags: resource.tags || {}
                     });
-                } else if (type === 'microsoft.web/sites' || type === 'microsoft.web/sites/slots') {
-                    // Check if it's a function app
-                    const kind = (resource.kind || '').toLowerCase();
-                    if (kind.includes('functionapp')) {
-                        functionApps++;
-                        resourceDetails.functionApps.push({
-                            name: resource.name,
-                            location: resource.location,
-                            resourceGroup: resource.resourceGroup,
-                            id: resource.id,
-                            kind: resource.kind,
-                            endpoint: `https://${resource.name}.azurewebsites.net`,
-                            properties: resource.properties,
-                            tags: resource.tags || {}
-                        });
-                    }
+                } else if (type === 'microsoft.web/sites' && kind.includes('functionapp') && 
+                          !resourceDetails.functionApps.find(f => f.id === resource.id)) {
+                    functionApps++;
+                    resourceDetails.functionApps.push({
+                        name: resource.name,
+                        location: resource.location,
+                        resourceGroup: resource.id?.split('/')[4] || 'unknown',
+                        id: resource.id,
+                        kind: resource.kind,
+                        endpoint: `https://${resource.name}.azurewebsites.net`,
+                        properties: resource.properties || {},
+                        tags: resource.tags || {}
+                    });
                 } else if (type === 'microsoft.storage/storageaccounts') {
                     storageAccounts++;
                     resourceDetails.storageAccounts.push({
                         name: resource.name,
                         location: resource.location,
-                        resourceGroup: resource.resourceGroup,
+                        resourceGroup: resource.id?.split('/')[4] || 'unknown',
                         id: resource.id,
-                        properties: resource.properties,
+                        properties: resource.properties || {},
                         tags: resource.tags || {}
                     });
                 }
-            });
+            }
         }
+        
+        // Get Storage Accounts using dedicated client (most reliable)
+        if (storageAccounts === 0) {
+            for await (const account of storageClient.storageAccounts.list()) {
+                if (!resourceDetails.storageAccounts.find(s => s.id === account.id)) {
+                    storageAccounts++;
+                    resourceDetails.storageAccounts.push({
+                        name: account.name,
+                        location: account.location,
+                        resourceGroup: account.id?.split('/')[4] || 'unknown',
+                        id: account.id,
+                        sku: account.sku?.name,
+                        kind: account.kind,
+                        properties: account,
+                        tags: account.tags || {}
+                    });
+                }
+            }
+            console.log(`Found ${storageAccounts} storage accounts`);
+        }
+        
+        console.log(`Total counts - Static Sites: ${staticSites}, Function Apps: ${functionApps}, Storage: ${storageAccounts}`);
         
         return {
             counts: {
                 staticSites,
                 functionApps,
                 storageAccounts,
-                totalResources: result.data?.length || 0
+                totalResources
             },
             details: resourceDetails
         };
