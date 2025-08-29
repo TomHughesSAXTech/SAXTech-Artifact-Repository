@@ -2,6 +2,8 @@
 const STORAGE_ACCOUNT = 'saxtechartifactstorage';
 const CONTAINER_NAME = 'artifacts';
 const BLOB_BASE_URL = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}`;
+// SAS token for read/write access (expires in 1 year - regenerate as needed)
+const SAS_TOKEN = 'se=2026-08-29T00%3A40%3A06Z&sp=racwdl&sv=2022-11-02&sr=c&sig=yQaTgRxCPw6PfIJznS5uiavItFNG5PCv5Mzu9k8YB4c%3D';
 
 // Get user info from Azure Static Web Apps authentication
 async function getUserInfo() {
@@ -66,40 +68,19 @@ class AzureBlobManager {
         }
     }
 
-    // Initialize with default projects
+    // Initialize with empty projects or load from localStorage
     initializeDefaultProjects() {
-        this.projects = [
-            {
-                id: 1,
-                name: "ConnectWise PSA Integration Suite",
-                client: "Internal - SAXTech",
-                type: "ITIL Automation",
-                description: "Next-generation service desk automation leveraging Pia.AI for intelligent ticket routing and resolution",
-                github: "https://github.com/saxtech/connectwise-integration",
-                frontend: "https://saxtech-cw.azurewebsites.net",
-                artifacts: [
-                    { name: "SOW_ConnectWise_2024.pdf", type: "SOW", size: "2.4 MB", icon: "📋", blobUrl: "" },
-                    { name: "ROI_Analysis_Q1.xlsx", type: "ROI", size: "1.1 MB", icon: "📊", blobUrl: "" }
-                ],
-                created: new Date("2024-01-15"),
-                status: "active"
-            },
-            {
-                id: 2,
-                name: "Azure Cognitive Search Platform",
-                client: "TechCorp Solutions",
-                type: "AI Integration",
-                description: "Enterprise semantic search with vectorized indexing and Azure OpenAI integration",
-                github: "https://github.com/saxtech/azure-cognitive",
-                frontend: "https://techcorp-search.azurewebsites.net",
-                artifacts: [
-                    { name: "Requirements_v2.docx", type: "ClientData", size: "890 KB", icon: "📄", blobUrl: "" },
-                    { name: "API_Documentation.pdf", type: "Documentation", size: "4.5 MB", icon: "📚", blobUrl: "" }
-                ],
-                created: new Date("2024-02-01"),
-                status: "active"
+        // Try to load from localStorage first
+        const stored = localStorage.getItem('saxtech_projects');
+        if (stored) {
+            try {
+                this.projects = JSON.parse(stored);
+            } catch (e) {
+                this.projects = [];
             }
-        ];
+        } else {
+            this.projects = [];
+        }
         this.renderProjects();
         this.updateStats();
     }
@@ -133,12 +114,61 @@ class AzureBlobManager {
 
     // Upload file to blob storage
     async uploadFile(file, projectId, artifactType) {
-        const fileName = `project-${projectId}/${artifactType}/${file.name}`;
+        const fileName = `project-${projectId}/${artifactType}/${Date.now()}-${file.name}`;
         const blobUrl = `${BLOB_BASE_URL}/${fileName}`;
+        const uploadUrl = `${blobUrl}?${SAS_TOKEN}`;
         
         try {
-            // Note: In production, you would use Azure AD authentication
-            // For now, we'll store the file reference
+            // Upload using SAS token
+            const response = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'x-ms-blob-type': 'BlockBlob',
+                    'Content-Type': file.type || 'application/octet-stream',
+                    'x-ms-blob-content-type': file.type || 'application/octet-stream'
+                },
+                body: file
+            });
+
+            if (response.ok || response.status === 201) {
+                const project = this.projects.find(p => p.id === projectId);
+                if (project) {
+                    const artifact = {
+                        name: file.name,
+                        type: artifactType,
+                        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                        icon: this.getIconForType(artifactType),
+                        blobUrl: blobUrl,
+                        uploadDate: new Date().toISOString()
+                    };
+                    
+                    project.artifacts.push(artifact);
+                    await this.saveProjectsToBlob();
+                    this.saveProjectsToLocalStorage();
+                    return true;
+                }
+            } else {
+                // Fallback to localStorage only
+                const project = this.projects.find(p => p.id === projectId);
+                if (project) {
+                    const artifact = {
+                        name: file.name,
+                        type: artifactType,
+                        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                        icon: this.getIconForType(artifactType),
+                        blobUrl: blobUrl,
+                        uploadDate: new Date().toISOString(),
+                        localOnly: true
+                    };
+                    
+                    project.artifacts.push(artifact);
+                    this.saveProjectsToLocalStorage();
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            // Fallback to localStorage
             const project = this.projects.find(p => p.id === projectId);
             if (project) {
                 const artifact = {
@@ -147,15 +177,14 @@ class AzureBlobManager {
                     size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
                     icon: this.getIconForType(artifactType),
                     blobUrl: blobUrl,
-                    uploadDate: new Date().toISOString()
+                    uploadDate: new Date().toISOString(),
+                    localOnly: true
                 };
                 
                 project.artifacts.push(artifact);
                 this.saveProjectsToLocalStorage();
                 return true;
             }
-        } catch (error) {
-            console.error('Upload error:', error);
             return false;
         }
     }
@@ -193,11 +222,35 @@ class AzureBlobManager {
         return iconMap[type] || '📁';
     }
 
-    // Save projects to localStorage (temporary until blob write is implemented)
+    // Save projects to localStorage
     saveProjectsToLocalStorage() {
         localStorage.setItem('saxtech_projects', JSON.stringify(this.projects));
         this.renderProjects();
         this.updateStats();
+    }
+
+    // Save projects metadata to blob storage
+    async saveProjectsToBlob() {
+        try {
+            const projectsJson = JSON.stringify(this.projects, null, 2);
+            const blob = new Blob([projectsJson], { type: 'application/json' });
+            const uploadUrl = `${BLOB_BASE_URL}/projects.json?${SAS_TOKEN}`;
+            
+            const response = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'x-ms-blob-type': 'BlockBlob',
+                    'Content-Type': 'application/json',
+                    'x-ms-blob-content-type': 'application/json'
+                },
+                body: blob
+            });
+            
+            return response.ok || response.status === 201;
+        } catch (error) {
+            console.error('Error saving projects to blob:', error);
+            return false;
+        }
     }
 
     // Load projects from localStorage

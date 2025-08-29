@@ -1013,58 +1013,8 @@
     </div>
 
     <script>
-        // Enhanced sample data
-        let projects = [
-            {
-                id: 1,
-                name: "ConnectWise PSA Integration Suite",
-                client: "Internal - SAXTech",
-                type: "ITIL Automation",
-                description: "Next-generation service desk automation leveraging Pia.AI for intelligent ticket routing and resolution",
-                github: "https://github.com/saxtech/connectwise-integration",
-                frontend: "https://saxtech-cw.azurewebsites.net",
-                artifacts: [
-                    { name: "SOW_ConnectWise_2024.pdf", type: "SOW", size: "2.4 MB", icon: "📋" },
-                    { name: "ROI_Analysis_Q1.xlsx", type: "ROI", size: "1.1 MB", icon: "📊" },
-                    { name: "automation_workflow.json", type: "N8N", size: "45 KB", icon: "⚙️" },
-                    { name: "Architecture_Diagram.pdf", type: "Architecture", size: "3.2 MB", icon: "🏗️" }
-                ],
-                created: new Date("2024-01-15"),
-                status: "active"
-            },
-            {
-                id: 2,
-                name: "Azure Cognitive Search Platform",
-                client: "TechCorp Solutions",
-                type: "AI Integration",
-                description: "Enterprise semantic search with vectorized indexing and Azure OpenAI integration",
-                github: "https://github.com/saxtech/azure-cognitive",
-                frontend: "https://techcorp-search.azurewebsites.net",
-                artifacts: [
-                    { name: "Requirements_v2.docx", type: "ClientData", size: "890 KB", icon: "📄" },
-                    { name: "search_index.json", type: "Documentation", size: "12 KB", icon: "🔍" },
-                    { name: "API_Documentation.pdf", type: "Documentation", size: "4.5 MB", icon: "📚" }
-                ],
-                created: new Date("2024-02-01"),
-                status: "active"
-            },
-            {
-                id: 3,
-                name: "Azure Infrastructure Migration",
-                client: "GlobalFinance Corp",
-                type: "Azure Migration",
-                description: "Complete Windows infrastructure migration to Azure with hybrid connectivity",
-                github: "https://github.com/saxtech/azure-migration",
-                frontend: "https://globalfinance.azurewebsites.net",
-                artifacts: [
-                    { name: "Migration_Plan.pdf", type: "SOW", size: "5.2 MB", icon: "📋" },
-                    { name: "Cost_Analysis.xlsx", type: "ROI", size: "2.8 MB", icon: "📊" },
-                    { name: "Network_Topology.vsdx", type: "Architecture", size: "8.1 MB", icon: "🏗️" }
-                ],
-                created: new Date("2024-03-10"),
-                status: "active"
-            }
-        ];
+        // Projects will be loaded from blob storage or localStorage
+        let projects = [];
 
         function updateStats() {
             // Animate counter updates
@@ -1279,66 +1229,60 @@
         }
 
         // Form submissions
-        document.getElementById('createProjectForm').addEventListener('submit', (e) => {
+        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const newProject = {
-                id: projects.length + 1,
-                name: document.getElementById('projectName').value,
-                client: document.getElementById('clientName').value,
-                type: document.getElementById('projectType').value,
-                description: document.getElementById('projectDescription').value || "New project pending description",
-                github: document.getElementById('githubUrl').value,
-                frontend: document.getElementById('frontendUrl').value,
-                artifacts: [],
-                created: new Date(),
-                status: "active"
-            };
-            
-            projects.unshift(newProject);
-            updateStats();
-            renderProjects();
-            closeModal('createProjectModal');
-            showToast('Project initialized successfully');
-            document.getElementById('createProjectForm').reset();
+            if (window.blobManager) {
+                const projectData = {
+                    name: document.getElementById('projectName').value,
+                    client: document.getElementById('clientName').value,
+                    type: document.getElementById('projectType').value,
+                    description: document.getElementById('projectDescription').value || "New project pending description",
+                    github: document.getElementById('githubUrl').value,
+                    frontend: document.getElementById('frontendUrl').value
+                };
+                
+                const newProject = window.blobManager.createProject(projectData);
+                await window.blobManager.saveProjectsToBlob();
+                
+                updateStats();
+                renderProjects();
+                closeModal('createProjectModal');
+                showToast('Project initialized and saved to Azure');
+                document.getElementById('createProjectForm').reset();
+            }
         });
         
-        document.getElementById('uploadForm').addEventListener('submit', (e) => {
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const projectId = parseInt(document.getElementById('uploadProject').value);
             const artifactType = document.getElementById('artifactType').value;
             const files = fileInput.files;
             
-            if (files.length > 0) {
-                const project = projects.find(p => p.id === projectId);
-                if (project) {
-                    const iconMap = {
-                        'SOW': '📋',
-                        'ROI': '📊',
-                        'N8N': '⚙️',
-                        'ClientData': '📄',
-                        'Documentation': '📚',
-                        'Architecture': '🏗️',
-                        'Other': '📁'
-                    };
-                    
-                    Array.from(files).forEach(file => {
-                        project.artifacts.push({
-                            name: file.name,
-                            type: artifactType,
-                            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                            icon: iconMap[artifactType] || '📁'
-                        });
-                    });
-                    
+            if (files.length > 0 && window.blobManager) {
+                let uploadCount = 0;
+                
+                // Show loading state
+                showToast('Uploading files to Azure Blob Storage...', 'info');
+                
+                for (const file of files) {
+                    const success = await window.blobManager.uploadFile(file, projectId, artifactType);
+                    if (success) {
+                        uploadCount++;
+                    }
+                }
+                
+                if (uploadCount > 0) {
                     updateStats();
                     renderProjects();
                     closeModal('uploadModal');
-                    showToast(`${files.length} artifact(s) uploaded to Azure`);
+                    showToast(`${uploadCount} artifact(s) successfully uploaded to Azure Blob Storage`);
                     document.getElementById('uploadForm').reset();
                     document.getElementById('selectedFiles').style.display = 'none';
                     document.getElementById('selectedFiles').innerHTML = '';
+                } else {
+                    showToast('Failed to upload files. Please try again.', 'error');
                 }
             }
         });
