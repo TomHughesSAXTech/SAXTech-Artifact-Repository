@@ -171,15 +171,8 @@ module.exports = async function (context, req) {
             };
         }
 
-        // Fetch cost data - ALWAYS include this in 'all' type
+        // Fetch REAL cost data from Azure Cost Management
         if (metricType === 'all' || metricType === 'costs') {
-            metrics.costs = {
-                monthToDate: 127.43,
-                yesterday: 4.21,
-                currency: 'USD',
-                historical: []
-            };
-            
             try {
                 const now = new Date();
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -284,15 +277,8 @@ module.exports = async function (context, req) {
                     }
                 } catch (err) {
                     context.log.warn('Historical cost query failed:', err.message);
-                    // Generate sample data as fallback
-                    for (let i = 29; i >= 0; i--) {
-                        const date = new Date(now);
-                        date.setDate(date.getDate() - i);
-                        historical.push({
-                            date: date.toISOString().split('T')[0],
-                            cost: Math.random() * 10 + 5 // Random cost between $5-15
-                        });
-                    }
+                    // No fallback - use empty array if real data fails
+                    historical = [];
                 }
                 
                 metrics.costs = {
@@ -303,27 +289,18 @@ module.exports = async function (context, req) {
                 };
             } catch (error) {
                 context.log.warn('Cost API error:', error.message);
-                // Provide fallback data
+                // Return actual zeros if API fails - no mock data
                 metrics.costs = {
-                    monthToDate: 127.43,
-                    yesterday: 4.21,
+                    monthToDate: 0,
+                    yesterday: 0,
                     currency: 'USD',
                     historical: []
                 };
             }
         }
 
-        // Fetch storage metrics - ALWAYS include in 'all' type
+        // Fetch REAL storage metrics from Azure
         if (metricType === 'all' || metricType === 'storage') {
-            // Set default storage data first
-            metrics.storage = {
-                accounts: [{
-                    name: 'saxtechartifactstorage',
-                    usedBytes: 1024 * 1024 * 512 // 512MB
-                }],
-                totalUsedBytes: 1024 * 1024 * 512
-            };
-            
             try {
                 const storageAccounts = [];
                 let totalUsedBytes = 0;
