@@ -65,13 +65,15 @@ async function setCachedData(key, data) {
 }
 
 // FIXED: Proper daily cost aggregation
-async function fetchCostData() {
+async function fetchCostData(bypassCache = false) {
     const cacheKey = 'costData';
     
-    const cachedCost = await getCachedData(cacheKey);
-    if (cachedCost) {
-        console.log('Returning cached cost data');
-        return cachedCost;
+    if (!bypassCache) {
+        const cachedCost = await getCachedData(cacheKey);
+        if (cachedCost && cachedCost.monthToDate > 0) {
+            console.log('Returning cached cost data');
+            return cachedCost;
+        }
     }
     
     try {
@@ -781,13 +783,15 @@ async function fetchBackupStatus() {
 }
 
 // FIXED: GPT usage with proper OpenAI metrics
-async function fetchGPTUsage() {
+async function fetchGPTUsage(bypassCache = false) {
     const cacheKey = 'gptUsage';
     
-    const cachedUsage = await getCachedData(cacheKey);
-    if (cachedUsage) {
-        console.log('Returning cached GPT usage data');
-        return cachedUsage;
+    if (!bypassCache) {
+        const cachedUsage = await getCachedData(cacheKey);
+        if (cachedUsage && cachedUsage.modelUsage && Object.keys(cachedUsage.modelUsage).length > 0) {
+            console.log('Returning cached GPT usage data');
+            return cachedUsage;
+        }
     }
     
     try {
@@ -1087,12 +1091,16 @@ app.http('metrics', {
         };
         
         try {
+            // Check if cache bypass is requested
+            const url = new URL(request.url);
+            const bypassCache = url.searchParams.get('nocache') === 'true' || request.body?.clearCache === true;
+            
             const [costData, resourceData, storageData, k8sData, gptData, backupData] = await Promise.allSettled([
-                fetchCostData(),
+                fetchCostData(bypassCache),
                 fetchResourceCounts(),
                 fetchStorageAccounts(),
                 fetchKubernetesMetrics(),
-                fetchGPTUsage(),
+                fetchGPTUsage(bypassCache),
                 fetchBackupStatus()
             ]);
             
