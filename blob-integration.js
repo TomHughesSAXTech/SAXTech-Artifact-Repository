@@ -308,6 +308,9 @@ let blobManager;
 document.addEventListener('DOMContentLoaded', () => {
     blobManager = new AzureBlobManager();
     
+    // Make blob manager globally accessible
+    window.blobManager = blobManager;
+    
     // Override the global projects variable
     Object.defineProperty(window, 'projects', {
         get: function() {

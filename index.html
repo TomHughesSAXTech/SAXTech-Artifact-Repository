@@ -1008,6 +1008,77 @@
         </div>
     </div>
 
+    <!-- Edit Project Modal -->
+    <div id="editProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Project</h2>
+                <button class="close-modal" onclick="closeModal('editProjectModal')">×</button>
+            </div>
+            <form id="editProjectForm">
+                <input type="hidden" id="editProjectId">
+                <div class="form-group">
+                    <label class="form-label">Client Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="editClientName" required placeholder="Enter client organization name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="editProjectName" required placeholder="Enter project identifier">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Type <span class="required">*</span></label>
+                    <select class="form-select" id="editProjectType" required>
+                        <option value="">Select project category</option>
+                        <option value="ITIL Automation">ITIL Automation</option>
+                        <option value="Azure Migration">Azure Migration</option>
+                        <option value="AI Integration">AI Integration</option>
+                        <option value="Service Desk">Service Desk</option>
+                        <option value="Infrastructure">Infrastructure</option>
+                        <option value="ConnectWise PSA">ConnectWise PSA</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Status <span class="required">*</span></label>
+                    <select class="form-select" id="editProjectStatus" required>
+                        <option value="">Select project status</option>
+                        <option value="Design">Design</option>
+                        <option value="Building Beta">Building Beta</option>
+                        <option value="Waiting on Client">Waiting on Client</option>
+                        <option value="Building for Production">Building for Production</option>
+                        <option value="Live in Production">Live in Production</option>
+                        <option value="Under Maintenance">Under Maintenance</option>
+                        <option value="Lost Deal">Lost Deal</option>
+                        <option value="Internal Usage">Internal Usage</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Description</label>
+                    <textarea class="form-textarea" id="editProjectDescription" placeholder="Provide project overview and objectives"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">GitHub Repository</label>
+                    <input type="url" class="form-input" id="editGithubUrl" placeholder="https://github.com/saxtech/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Azure Frontend URL</label>
+                    <input type="url" class="form-input" id="editFrontendUrl" placeholder="https://[project].azurewebsites.net">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Monthly Recurring Revenue (MRR)</label>
+                    <input type="number" class="form-input" id="editMrrValue" placeholder="Enter MRR in USD" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Implementation Fee</label>
+                    <input type="number" class="form-input" id="editImplementationFee" placeholder="Enter one-time implementation fee in USD" min="0" step="0.01">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Upload Modal -->
     <div id="uploadModal" class="modal">
         <div class="modal-content">
@@ -1137,7 +1208,8 @@
                     <div class="project-links">
                         ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
-                        <a href="#" class="link-btn" onclick="downloadProject(${project.id}); return false;"><span>⬇</span> Export</a>
+                        <a href="#" class="link-btn" onclick="editProject(${project.id}); return false;"><span>✏️</span> Edit</a>
+                        <a href="#" class="link-btn" onclick="deleteProject(${project.id}); return false;" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><span>🗑️</span> Delete</a>
                     </div>
                     <div class="project-artifacts">
                         <div class="artifacts-header">Project Artifacts (${project.artifacts.length})</div>
@@ -1225,8 +1297,52 @@
             }, 1500);
         }
 
-        function downloadProject(projectId) {
-            showToast(`Preparing project export...`);
+        function editProject(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                showToast('Project not found', 'error');
+                return;
+            }
+            
+            // Populate edit form
+            document.getElementById('editProjectId').value = project.id;
+            document.getElementById('editClientName').value = project.client || '';
+            document.getElementById('editProjectName').value = project.name || '';
+            document.getElementById('editProjectType').value = project.type || '';
+            document.getElementById('editProjectStatus').value = project.status || '';
+            document.getElementById('editProjectDescription').value = project.description || '';
+            document.getElementById('editGithubUrl').value = project.github || '';
+            document.getElementById('editFrontendUrl').value = project.frontend || '';
+            document.getElementById('editMrrValue').value = project.mrr || 0;
+            document.getElementById('editImplementationFee').value = project.implementationFee || 0;
+            
+            document.getElementById('editProjectModal').classList.add('active');
+        }
+
+        async function deleteProject(projectId) {
+            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                return;
+            }
+            
+            const projectIndex = projects.findIndex(p => p.id === projectId);
+            if (projectIndex === -1) {
+                showToast('Project not found', 'error');
+                return;
+            }
+            
+            // Remove from array
+            projects.splice(projectIndex, 1);
+            
+            // Save to blob storage
+            if (window.blobManager) {
+                window.blobManager.projects = projects;
+                await window.blobManager.saveProjectsToBlob();
+                window.blobManager.saveProjectsToLocalStorage();
+            }
+            
+            updateStats();
+            renderProjects();
+            showToast('Project deleted successfully');
         }
 
         // File upload handling
@@ -1300,6 +1416,45 @@
                 showToast('Project initialized and saved to Azure');
                 document.getElementById('createProjectForm').reset();
             }
+        });
+        
+        document.getElementById('editProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const projectId = parseInt(document.getElementById('editProjectId').value);
+            const projectIndex = projects.findIndex(p => p.id === projectId);
+            
+            if (projectIndex === -1) {
+                showToast('Project not found', 'error');
+                return;
+            }
+            
+            // Update project data
+            projects[projectIndex] = {
+                ...projects[projectIndex],
+                name: document.getElementById('editProjectName').value,
+                client: document.getElementById('editClientName').value,
+                type: document.getElementById('editProjectType').value,
+                status: document.getElementById('editProjectStatus').value,
+                description: document.getElementById('editProjectDescription').value || "New project pending description",
+                github: document.getElementById('editGithubUrl').value,
+                frontend: document.getElementById('editFrontendUrl').value,
+                mrr: parseFloat(document.getElementById('editMrrValue').value) || 0,
+                implementationFee: parseFloat(document.getElementById('editImplementationFee').value) || 0,
+                lastModified: new Date().toISOString()
+            };
+            
+            // Save to blob storage
+            if (window.blobManager) {
+                window.blobManager.projects = projects;
+                await window.blobManager.saveProjectsToBlob();
+                window.blobManager.saveProjectsToLocalStorage();
+            }
+            
+            updateStats();
+            renderProjects();
+            closeModal('editProjectModal');
+            showToast('Project updated successfully');
         });
         
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
