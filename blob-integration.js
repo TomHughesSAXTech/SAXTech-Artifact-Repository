@@ -9,8 +9,13 @@ const SAS_TOKEN = 'se=2026-08-29T00%3A40%3A06Z&sp=racwdl&sv=2022-11-02&sr=c&sig=
 async function getUserInfo() {
     try {
         const response = await fetch('/.auth/me');
-        const data = await response.json();
-        return data.clientPrincipal;
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            return data.clientPrincipal;
+        }
+        return null;
     } catch (error) {
         console.error('Error getting user info:', error);
         return null;
@@ -42,10 +47,11 @@ class AzureBlobManager {
         this.isAuthenticated = await isAuthorizedUser();
         
         if (!this.isAuthenticated) {
-            console.log('User not authorized. Redirecting to login...');
-            // Static Web App config will handle redirect
+            console.log('Authentication not available, using local storage');
+            // For now, continue without auth and use local storage
+            this.initializeDefaultProjects();
         } else {
-            console.log('User authenticated:', this.userInfo.userDetails);
+            console.log('User authenticated:', this.userInfo?.userDetails);
             this.loadProjectsFromBlob();
         }
     }

@@ -11,19 +11,14 @@ class AzureIntegration {
 
     async initialize() {
         try {
-            // Get Azure access token from the logged-in user's session
-            const authResponse = await fetch('/.auth/me');
-            const authData = await authResponse.json();
-            
-            if (authData && authData.clientPrincipal) {
-                // For Azure Static Web Apps, we need to get a proper Azure management token
-                // This would typically be done through a backend API
-                await this.getManagementToken();
-            }
-            
+            // Skip auth check for now and directly get management token
+            // The Azure Functions will handle authentication
+            await this.getManagementToken();
             this.initialized = true;
         } catch (error) {
             console.error('Failed to initialize Azure integration:', error);
+            // Continue anyway - functions might still work
+            this.initialized = true;
         }
     }
 
