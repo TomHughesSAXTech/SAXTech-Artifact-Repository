@@ -1,0 +1,4 @@
+<step title="BackgroundTrace" date="2025-08-29T17:45:42.313" instance="273a91" url="synctriggers-operation" method="POST" >
+  <step title="Updating shutdown sentinel last write time" date="2025-08-29T17:45:42.329" SemaphoreCount="6" /><!-- duration: 16ms -->
+  <step title="Delaying &apos;00:01:00&apos; for Functions site to restart." date="2025-08-29T17:45:42.375" /><!-- duration: 16ms -->
+</step><!-- duration: 60385ms -->

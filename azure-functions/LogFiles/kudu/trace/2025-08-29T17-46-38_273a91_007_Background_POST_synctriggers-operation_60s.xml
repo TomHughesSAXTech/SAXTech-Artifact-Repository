@@ -1,0 +1,11 @@
+<step title="BackgroundTrace" date="2025-08-29T17:46:38.625" instance="273a91" url="synctriggers-operation" method="POST" >
+  <step title="Updating shutdown sentinel last write time" date="2025-08-29T17:46:38.640" SemaphoreCount="5" /><!-- duration: 31ms -->
+  <step title="Delaying &apos;00:01:00&apos; for Functions site to restart." date="2025-08-29T17:46:38.687" /><!-- duration: 16ms -->
+  <step title="Begin HttpPost https://saxtech-metrics-api.azurewebsites.net/admin/host/synctriggers, x-ms-request-id: d12de9eb-0c33-41c2-b8f4-4ba0685f2824" date="2025-08-29T17:46:42.433" /><!-- duration: 16ms -->
+  <step title="End HttpPost, status: OK" date="2025-08-29T17:46:42.636" /><!-- duration: 16ms -->
+  <step title="Syncing function triggers by calling the functions runtime site successful." date="2025-08-29T17:46:42.667" /><!-- duration: 16ms -->
+  <step title="Begin HttpPost https://saxtech-metrics-api.azurewebsites.net/admin/host/synctriggers, x-ms-request-id: 2ac38299-a61d-4029-b145-4db4f2fb1765" date="2025-08-29T17:47:38.739" /><!-- duration: 31ms -->
+  <step title="End HttpPost, status: OK" date="2025-08-29T17:47:38.958" /><!-- duration: 16ms -->
+  <step title="Syncing function triggers by calling the functions runtime site successful." date="2025-08-29T17:47:39.005" /><!-- duration: 16ms -->
+  <step title="Deleting shutdown sentinel file" date="2025-08-29T17:47:39.036" SemaphoreCount="8" /><!-- duration: 16ms -->
+</step><!-- duration: 60443ms -->

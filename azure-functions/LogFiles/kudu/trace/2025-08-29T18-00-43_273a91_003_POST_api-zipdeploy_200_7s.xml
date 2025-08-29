@@ -1,0 +1,53 @@
+<step title="Incoming Request" date="2025-08-29T18:00:43.452" instance="273a91" url="/api/zipdeploy" method="POST" type="request" pid="6376,2,9" Content-Length="18932990" Content-Type="application/zip" Authorization="Bea..." Host="saxtech-metrics-api.scm.azurewebsites.net" If-Match="*" User-Agent="functions-core-tools/4.0.7317" X-ARR-LOG-ID="7b6358ea-54b7-45f6-9152-6a756cdecac7" CLIENT-IP="71.217.130.52:58693" X-SITE-DEPLOYMENT-ID="saxtech-metrics-api" WAS-DEFAULT-HOSTNAME="saxtech-metrics-api.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.2" X-WAWS-Unencoded-URL="/api/zipdeploy" >
+  <step title="ZipPushDeploy" date="2025-08-29T18:00:43.515" >
+    <step title="Functions App ZipDeploy. Run from package." date="2025-08-29T18:00:43.577" /><!-- duration: 19ms -->
+    <step title="Starting PushDeployAsync" date="2025-08-29T18:00:43.609" /><!-- duration: 31ms -->
+    <step title="Updating shutdown sentinel last write time" date="2025-08-29T18:00:43.671" SemaphoreCount="7" /><!-- duration: 16ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; acquired" date="2025-08-29T18:00:43.718" /><!-- duration: 16ms -->
+    <step title="Deleting outdated zip file C:\home\data\SitePackages\20250829174535.zip" date="2025-08-29T18:00:43.765" /><!-- duration: 31ms -->
+    <step title="Saving request content to C:\home\data\SitePackages\20250829180043.zip" date="2025-08-29T18:00:43.812" >
+      <step title="Total 18,932,990 bytes written to C:\home\data\SitePackages\20250829180043.zip" date="2025-08-29T18:00:44.187" /><!-- duration: 16ms -->
+    </step><!-- duration: 1261ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; released" date="2025-08-29T18:00:45.103" /><!-- duration: 16ms -->
+    <step title="Deleting shutdown sentinel file" date="2025-08-29T18:00:45.165" SemaphoreCount="8" /><!-- duration: 16ms -->
+    <step title="Starting FetchDeploy" date="2025-08-29T18:00:45.197" /><!-- duration: 16ms -->
+    <step title="Attempting to fetch target branch HEAD" date="2025-08-29T18:00:45.244" /><!-- duration: 15ms -->
+    <step title="Updating shutdown sentinel last write time" date="2025-08-29T18:00:45.290" SemaphoreCount="7" /><!-- duration: 47ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; acquired" date="2025-08-29T18:00:45.369" /><!-- duration: 16ms -->
+    <step title="Performing fetch based deployment" date="2025-08-29T18:00:45.400" >
+      <step title="Creating temporary deployment" date="2025-08-29T18:00:45.415" /><!-- duration: 125ms -->
+      <step title="Fetching changes." date="2025-08-29T18:00:45.712" /><!-- duration: 16ms -->
+      <step title="Starting LocalZipHandler" date="2025-08-29T18:00:45.775" /><!-- duration: 16ms -->
+      <step title="Starting ExtractTriggers" date="2025-08-29T18:00:45.806" /><!-- duration: 31ms -->
+      <step title="None repository commit" date="2025-08-29T18:00:47.103" >
+        <step title="Commit id: 88d45806db90462f94ed2c48703b2061" date="2025-08-29T18:00:47.119" Message="Created via a push deployment" AuthorName="N/A" AuthorEmail="N/A" /><!-- duration: 16ms -->
+      </step><!-- duration: 63ms -->
+      <step title="Before sending BuildRequestReceived status to /api/updatedeploystatus" date="2025-08-29T18:00:47.181" /><!-- duration: 16ms -->
+      <step title="DeploymentManager.Deploy(id:88d45806db90462f94ed2c48703b2061)" date="2025-08-29T18:00:47.212" >
+        <step title="Collecting changeset information" date="2025-08-29T18:00:47.259" /><!-- duration: 141ms -->
+        <step title="Updating submodules" date="2025-08-29T18:00:47.415" >
+          <step title="Updating submodules." date="2025-08-29T18:00:47.593" /><!-- duration: 16ms -->
+        </step><!-- duration: 224ms -->
+        <step title="Preparing deployment for commit id &apos;88d45806db&apos;." date="2025-08-29T18:00:47.812" /><!-- duration: 16ms -->
+        <step title="Determining deployment builder" date="2025-08-29T18:00:47.999" >
+          <step title="Builder is RunFromZipSiteBuilder" date="2025-08-29T18:00:48.015" /><!-- duration: 31ms -->
+        </step><!-- duration: 94ms -->
+        <step title="Copying SSH keys" date="2025-08-29T18:00:48.155" /><!-- duration: 31ms -->
+        <step title="Building" date="2025-08-29T18:00:48.218" >
+          <step title="Skipping build. Project type: Run-From-Zip" date="2025-08-29T18:00:48.390" /><!-- duration: 31ms -->
+          <step title="Skipping post build. Project type: Run-From-Zip" date="2025-08-29T18:00:48.609" /><!-- duration: 16ms -->
+          <step title="Triggering recycle (preview mode disabled)." date="2025-08-29T18:00:48.812" /><!-- duration: 31ms -->
+          <step title="Ignoring FS watcher based recycle request as this is a classic Windows app." date="2025-08-29T18:00:48.874" /><!-- duration: 16ms -->
+          <step title="Deployment successful. DEPLOYMENTINFO: deploymentPath = Functions App ZipDeploy. Run from package., deployer = ZipDeploy, os = windows, sku = Dynamic, language = node, siteName = saxtech-metrics-api, slotName = Production, siteHostName = saxtech-metrics-api.azurewebsites.net, deploymentStatus = Success" date="2025-08-29T18:00:49.077" /><!-- duration: 16ms -->
+        </step><!-- duration: 1375ms -->
+      </step><!-- duration: 2396ms -->
+      <step title="Cleaning up temp files" date="2025-08-29T18:00:49.624" /><!-- duration: 31ms -->
+      <step title="Updating C:\home\data\SitePackages\packagename.txt with deployment 20250829180043.zip" date="2025-08-29T18:00:49.671" /><!-- duration: 63ms -->
+      <step title="Begin HttpPost https://saxtech-metrics-api.scm.azurewebsites.net/operations/settriggers, x-ms-request-id: 7b6358ea-54b7-45f6-9152-6a756cdecac7" date="2025-08-29T18:00:49.780" /><!-- duration: 16ms -->
+      <step title="End HttpPost, status: OK" date="2025-08-29T18:00:49.921" /><!-- duration: 16ms -->
+      <step title="Scheduling background sync triggers after delay" date="2025-08-29T18:00:49.968" /><!-- duration: 16ms -->
+    </step><!-- duration: 4786ms -->
+    <step title="LockFile &apos;C:\home\site\locks\deployments.lock&apos; released" date="2025-08-29T18:00:50.218" /><!-- duration: 16ms -->
+  </step><!-- duration: 6750ms -->
+  <step title="Outgoing response" date="2025-08-29T18:00:50.280" type="response" statusCode="200" statusText="OK" Server="Microsoft-IIS/10.0" x-ms-request-id="7b6358ea-54b7-45f6-9152-6a756cdecac7" Cache-Control="private" X-AspNet-Version="4.0.30319" /><!-- duration: 31ms -->
+</step><!-- duration: 6875ms -->
