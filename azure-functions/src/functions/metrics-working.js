@@ -193,7 +193,7 @@ async function fetchResourceCounts() {
             subscriptions: [subscriptionId],
             query: `
                 Resources
-                | where subscriptionId =~ '${subscriptionId}'
+                | where subscriptionId == '${subscriptionId}'
                 | project name, type, location, resourceGroup, id, kind, properties, tags
                 | limit 1000
             `
@@ -225,7 +225,7 @@ async function fetchResourceCounts() {
                         properties: resource.properties,
                         tags: resource.tags || {}
                     });
-                } else if (type === 'microsoft.web/sites' || type === 'microsoft.web/sites/slots') {
+                } else if (type === 'microsoft.web/sites') {
                     // Check if it's a function app
                     const kind = (resource.kind || '').toLowerCase();
                     if (kind.includes('functionapp')) {
@@ -528,7 +528,7 @@ async function fetchBackupStatus() {
             subscriptions: [subscriptionId],
             query: `
                 Resources
-                | where subscriptionId =~ '${subscriptionId}'
+                | where subscriptionId == '${subscriptionId}'
                 | where type =~ 'microsoft.recoveryservices/vaults' or type =~ 'microsoft.dataprotection/backupvaults'
                 | project name, type, location, resourceGroup, id, properties
             `
@@ -558,7 +558,7 @@ async function fetchBackupStatus() {
             subscriptions: [subscriptionId],
             query: `
                 Resources
-                | where subscriptionId =~ '${subscriptionId}'
+                | where subscriptionId == '${subscriptionId}'
                 | where type contains 'backup'
                 | summarize count() by type
             `
@@ -781,8 +781,8 @@ async function fetchResourcesInResourceGroup(resourceGroupName) {
             subscriptions: [subscriptionId],
             query: `
                 Resources
-                | where subscriptionId =~ '${subscriptionId}'
-                | where resourceGroup =~ '${resourceGroupName}'
+                | where subscriptionId == '${subscriptionId}'
+                | where tolower(resourceGroup) == tolower('${resourceGroupName}')
                 | project name, type, location, id, kind, properties, tags
                 | order by type asc, name asc
                 | limit 1000
