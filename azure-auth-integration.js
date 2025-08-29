@@ -21,8 +21,19 @@ class AzureAuthIntegration {
             if (authResponse.ok) {
                 const authData = await authResponse.json();
                 
-                if (authData && authData.length > 0 && authData[0]) {
-                    this.userInfo = authData[0];
+                // Handle both array format and object format
+                let principal = null;
+                
+                if (Array.isArray(authData) && authData.length > 0 && authData[0]) {
+                    // Old format: array response
+                    principal = authData[0];
+                } else if (authData && authData.clientPrincipal) {
+                    // New format: object with clientPrincipal
+                    principal = authData.clientPrincipal;
+                }
+                
+                if (principal) {
+                    this.userInfo = principal;
                     
                     // The access token from Azure AD is included in the auth data
                     if (this.userInfo.accessToken) {
