@@ -1607,8 +1607,8 @@
                         </div>
                         <div class="project-badge">${project.type}</div>
                     </div>
-                    <div class="project-description">${project.description}</div>
                     <div class="project-links">
+                        <a href="#" class="link-btn" onclick="showProjectSummary('${project.id}'); return false;"><span>📄</span> Project Summary</a>
                         ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
                         ${project.n8nWorkflows && project.n8nWorkflows.main ? `<a href="#" class="link-btn" onclick="window.n8nIntegration.showWorkflowPreview('${project.n8nWorkflows.main}'); return false;"><span>⚙️</span> Workflow</a>` : ''}

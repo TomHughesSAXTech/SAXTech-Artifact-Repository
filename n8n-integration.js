@@ -277,12 +277,12 @@ class N8NIntegration {
         const nodes = workflowData.nodes || [];
         const connections = workflowData.connections || {};
         
-        // Simple grid layout
-        const nodeWidth = 180;
-        const nodeHeight = 80;
-        const padding = 40;
-        const horizontalSpacing = 250;
-        const verticalSpacing = 120;
+        // Improved grid layout with better spacing
+        const nodeWidth = 160;
+        const nodeHeight = 60;
+        const padding = 60;
+        const horizontalSpacing = 220;
+        const verticalSpacing = 100;
         
         // Group nodes by their approximate flow position
         const nodePositions = new Map();
@@ -403,16 +403,24 @@ class N8NIntegration {
         
         svg.appendChild(nodesGroup);
         
-        // Set viewBox to fit content - with fallback for empty bbox
+        // Calculate proper viewBox dimensions
         try {
-            const bbox = svg.getBBox();
-            if (bbox.width > 0 && bbox.height > 0) {
-                svg.setAttribute('viewBox', `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
+            // Calculate bounds manually from node positions
+            const positions = Array.from(nodePositions.values());
+            if (positions.length > 0) {
+                const minX = Math.min(...positions.map(p => p.x)) - padding;
+                const minY = Math.min(...positions.map(p => p.y)) - padding;
+                const maxX = Math.max(...positions.map(p => p.x + nodeWidth)) + padding;
+                const maxY = Math.max(...positions.map(p => p.y + nodeHeight)) + padding;
+                
+                const width = maxX - minX;
+                const height = maxY - minY;
+                
+                // Set viewBox with proper dimensions
+                svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+                svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
             } else {
-                // Fallback viewBox if getBBox fails
-                const maxX = Math.max(...Array.from(nodePositions.values()).map(p => p.x + nodeWidth));
-                const maxY = Math.max(...Array.from(nodePositions.values()).map(p => p.y + nodeHeight));
-                svg.setAttribute('viewBox', `0 0 ${maxX + 40} ${maxY + 40}`);
+                svg.setAttribute('viewBox', '0 0 800 400');
             }
         } catch (e) {
             console.warn('Could not calculate SVG viewBox, using default');
@@ -540,7 +548,7 @@ class N8NIntegration {
                         <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
                         <button class="btn btn-primary" onclick="window.open('${url}', '_blank')">
                             <span class="btn-icon">🔗</span>
-                            Open in N8N
+                            Open
                         </button>
                     </div>
                 </div>
