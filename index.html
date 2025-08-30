@@ -1514,7 +1514,8 @@
 
     <script>
         // Projects will be loaded from blob storage or localStorage
-        let projects = [];
+        // Don't use let - this will be overridden by blob manager
+        var projects = [];
 
         function updateStats() {
             // Animate counter updates
@@ -1962,9 +1963,19 @@
         document.getElementById('typeFilter').addEventListener('change', filterProjects);
         document.getElementById('clientFilter').addEventListener('change', filterProjects);
         
-        // Initialize
-        updateStats();
-        renderProjects();
+        // Initialize - wait for blob manager to load projects
+        window.addEventListener('DOMContentLoaded', () => {
+            // Give blob manager time to initialize
+            setTimeout(() => {
+                // Ensure projects are loaded from blob manager
+                if (window.blobManager) {
+                    projects = window.blobManager.getProjects();
+                    console.log('Projects loaded from blob manager:', projects.length);
+                }
+                updateStats();
+                renderProjects();
+            }, 500);
+        });
         
         // Load Azure infrastructure status
         async function loadInfrastructureStatus() {

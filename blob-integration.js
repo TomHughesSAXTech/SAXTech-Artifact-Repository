@@ -327,16 +327,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make blob manager globally accessible
     window.blobManager = blobManager;
     
-    // Override the global projects variable
-    Object.defineProperty(window, 'projects', {
-        get: function() {
-            return blobManager.getProjects();
-        },
-        set: function(value) {
-            blobManager.projects = value;
-            blobManager.saveProjectsToLocalStorage();
-        }
-    });
+    // Sync with the global projects variable instead of overriding
+    // This avoids conflicts with the var declaration in HTML
+    if (typeof window.projects !== 'undefined') {
+        // Initial sync from blob manager to global variable
+        window.projects = blobManager.getProjects();
+        console.log('Blob manager initialized with', blobManager.projects.length, 'projects');
+    }
 });
 
 // Export for use in HTML
