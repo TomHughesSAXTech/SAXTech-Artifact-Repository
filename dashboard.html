@@ -1,16 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Version 4: Fixed function app count, K8s display, storage handling, cache control -->
+  <!-- Version 5: Fixed Chart.js loading order issue -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Automation & AI Hub | Live Dashboard v4</title>
+  <title>Automation & AI Hub | Live Dashboard v5</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <!-- Load Chart.js first and wait for it to complete -->
   <script src="chart.min.js?v=2"></script>
-  <script src="chartjs-plugin-datalabels.min.js?v=2"></script>
+  <!-- Delay loading plugin until Chart.js is ready -->
+  <script>
+    // Wait for Chart.js to be available before loading the plugin
+    function loadChartPlugin() {
+      if (typeof Chart !== 'undefined' && Chart.helpers) {
+        const script = document.createElement('script');
+        script.src = 'chartjs-plugin-datalabels.min.js?v=2';
+        script.onload = function() {
+          console.log('Chart.js plugin loaded successfully');
+        };
+        document.head.appendChild(script);
+      } else {
+        // Retry in 100ms if Chart.js isn't ready yet
+        setTimeout(loadChartPlugin, 100);
+      }
+    }
+    // Start loading the plugin after a short delay
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(loadChartPlugin, 100);
+    });
+  </script>
   <script src="azure-auth-integration.js"></script>
   <script src="azure-metrics-fetcher.js"></script>
   <style>
