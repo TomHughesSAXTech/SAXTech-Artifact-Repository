@@ -450,25 +450,25 @@
     <div id="mainDashboard" style="display: none;">
       <!-- Cost Metrics -->
       <div class="dashboard-grid">
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownMetric('mtd')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Month-to-Date Cost</div>
           <div class="metric-value" id="mtdCost">--</div>
           <div class="metric-subtitle" id="mtdDates">Loading...</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownMetric('yesterday')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Yesterday's Cost</div>
           <div class="metric-value" id="yesterdayCost">--</div>
           <div class="metric-subtitle" id="yesterdayDate">--</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownMetric('today')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Today's Cost (Live)</div>
           <div class="metric-value" id="todayCost">--</div>
           <div class="metric-subtitle">Real-time from Azure</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownMetric('week')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Last 7 Days</div>
           <div class="metric-value" id="weekCost">--</div>
           <div class="metric-subtitle">Weekly spending</div>
@@ -871,9 +871,9 @@
 
     // Rate limiting configuration
     const rateLimitConfig = {
-      costApiDelay: 5000, // 5 seconds between Cost API calls (increased from 2s)
+      costApiDelay: 10000, // 10 seconds between Cost API calls
       maxRetries: 3,
-      retryDelay: 10000 // 10 seconds between retries (increased from 5s)
+      retryDelay: 30000 // 30 seconds between retries for 429 errors
     };
     
     let lastCostApiCall = 0;
@@ -1042,23 +1042,29 @@
           // Get MTD data first
           mtdData = await getCostData('MonthToDate');
           
+          // Store globally for drill-down
+          window.lastMtdData = mtdData;
+          
           // Longer delay to avoid rate limiting
-          await sleep(3000);
+          await sleep(10000); // Increased to 10 seconds
           
           // Get weekly data
           weekData = await getCostData('TheLastWeek');
+          window.lastWeekData = weekData;
           
           // Longer delay to avoid rate limiting
-          await sleep(3000);
+          await sleep(10000); // Increased to 10 seconds
           
           // Get yesterday's data
           yesterdayData = await getCostForDateRange(getYesterdayDate(), getYesterdayDate());
+          window.lastYesterdayData = yesterdayData;
           
           // Longer delay to avoid rate limiting
-          await sleep(3000);
+          await sleep(10000); // Increased to 10 seconds
           
           // Get today's data
           todayData = await getCostForDateRange(getTodayDate(), getTodayDate());
+          window.lastTodayData = todayData;
           
           // Update cost cards with available data
           if (mtdData || weekData || yesterdayData || todayData) {
@@ -1077,8 +1083,8 @@
           document.getElementById('costBreakdownTable').innerHTML = '<tr><td colspan="5" style="text-align: center;">Cost data requires Cost Management Reader role</td></tr>';
         }
         
-        // Update resources table
-        updateResourcesTable(resources);
+        // Update resources table (pass mtdData for costs if available)
+        updateResourcesTable(resources, mtdData);
 
         showMessage('Data refreshed successfully!', 'success');
         
@@ -1150,8 +1156,9 @@
       }
     }
 
-    // Service name mapping
+    // Service name mapping - expanded to handle Azure service codes
     const serviceNameMap = {
+      // Common numeric codes from Azure
       '1': 'Virtual Machines',
       '2': 'Storage',
       '3': 'Bandwidth',
@@ -1172,6 +1179,31 @@
       '18': 'Azure DevOps',
       '19': 'Azure Data Factory',
       '20': 'Static Web Apps',
+      // Service codes
+      'a1': 'API Management',
+      'a2': 'Application Gateway',
+      'a3': 'Azure Cosmos DB',
+      'a4': 'Azure Database for MySQL',
+      'a5': 'Azure Database for PostgreSQL',
+      'a6': 'Azure Firewall',
+      'a7': 'Azure Front Door',
+      'a8': 'Azure IoT Hub',
+      'a9': 'Azure Machine Learning',
+      'b1': 'Azure Redis Cache',
+      'b2': 'Azure Search',
+      'b3': 'Azure Service Bus',
+      'b4': 'Azure Stream Analytics',
+      'b5': 'Azure Synapse Analytics',
+      'b6': 'Cognitive Services',
+      'b7': 'Event Hubs',
+      'b8': 'ExpressRoute',
+      'b9': 'HDInsight',
+      'c1': 'Media Services',
+      'c2': 'Notification Hubs',
+      'c3': 'Power BI Embedded',
+      'c4': 'Traffic Manager',
+      'c5': 'VPN Gateway',
+      // Microsoft resource providers
       'microsoft.compute': 'Compute',
       'microsoft.storage': 'Storage',
       'microsoft.network': 'Networking',
@@ -1180,7 +1212,19 @@
       'microsoft.keyvault': 'Key Vault',
       'microsoft.insights': 'Azure Monitor',
       'microsoft.containerregistry': 'Container Registry',
-      'microsoft.kubernetes': 'Kubernetes Service'
+      'microsoft.kubernetes': 'Kubernetes Service',
+      'microsoft.documentdb': 'Cosmos DB',
+      'microsoft.cache': 'Redis Cache',
+      'microsoft.search': 'Azure Search',
+      'microsoft.servicebus': 'Service Bus',
+      'microsoft.eventhub': 'Event Hubs',
+      'microsoft.streamanalytics': 'Stream Analytics',
+      'microsoft.logic': 'Logic Apps',
+      'microsoft.apimanagement': 'API Management',
+      'microsoft.cognitiveservices': 'Cognitive Services',
+      'microsoft.machinelearning': 'Machine Learning',
+      'microsoft.devices': 'IoT Hub',
+      'microsoft.media': 'Media Services'
     };
     
     // Update Cost Breakdown Table
@@ -1207,13 +1251,22 @@
           service = serviceNameMap[service];
         } else if (serviceNameMap[serviceLower]) {
           service = serviceNameMap[serviceLower];
+        } else if (!isNaN(service)) {
+          // If it's a number, try to give it a better name
+          service = `Azure Service ${service}`;
         } else {
           // Try to make the service name more readable
           service = service.replace(/microsoft\./gi, '')
                           .replace(/[_-]/g, ' ')
                           .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .filter(word => word.length > 0)
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                           .join(' ');
+          
+          // If still looks like a code, prefix it
+          if (service.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
+            service = `Azure ${service}`;
+          }
         }
         
         if (!serviceData[service]) {
@@ -1595,6 +1648,123 @@
           </div>
         `;
       }
+    }
+    
+    // Drill-down for metric cards
+    window.drillDownMetric = async function(metricType) {
+      const modal = document.getElementById('detailModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      
+      let title, data;
+      switch(metricType) {
+        case 'mtd':
+          title = 'Month-to-Date Cost Breakdown';
+          data = window.lastMtdData;
+          break;
+        case 'yesterday':
+          title = 'Yesterday\'s Cost Breakdown';
+          data = window.lastYesterdayData;
+          break;
+        case 'today':
+          title = 'Today\'s Cost Breakdown';
+          data = window.lastTodayData;
+          break;
+        case 'week':
+          title = 'Last 7 Days Cost Breakdown';
+          data = window.lastWeekData;
+          break;
+      }
+      
+      modalTitle.textContent = title;
+      modalBody.innerHTML = '<div class="spinner"></div>';
+      modal.classList.add('active');
+      
+      if (!data || !data.properties || !data.properties.rows) {
+        modalBody.innerHTML = `
+          <div style="color: #ef4444; text-align: center;">
+            <p>No detailed data available for this period</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Process the data by service
+      const serviceData = {};
+      let totalCost = 0;
+      
+      data.properties.rows.forEach(row => {
+        let service = String(row[0] || 'Unknown');
+        const cost = row[1] || row[0] || 0; // Some responses have cost at index 0
+        
+        // Map service names
+        const serviceLower = service.toLowerCase();
+        if (serviceNameMap[service]) {
+          service = serviceNameMap[service];
+        } else if (serviceNameMap[serviceLower]) {
+          service = serviceNameMap[serviceLower];
+        } else if (!isNaN(service)) {
+          // If it's still a number, give it a better name
+          service = `Service ${service}`;
+        } else {
+          // Clean up the service name
+          service = service.replace(/microsoft\./gi, '')
+                          .replace(/[_-]/g, ' ')
+                          .split(' ')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ');
+        }
+        
+        if (!serviceData[service]) {
+          serviceData[service] = 0;
+        }
+        serviceData[service] += cost;
+        totalCost += cost;
+      });
+      
+      // Sort services by cost
+      const sortedServices = Object.entries(serviceData)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15); // Show top 15
+      
+      // Build the detail view
+      let html = `
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Total Cost</div>
+            <div class="detail-value">$${totalCost.toFixed(2)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Services</div>
+            <div class="detail-value">${sortedServices.length}</div>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 20px; color: #00d4ff;">Cost by Service</h3>
+        <table class="data-table" style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Cost</th>
+              <th>% of Total</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      sortedServices.forEach(([service, cost]) => {
+        const percentage = ((cost / totalCost) * 100).toFixed(1);
+        html += `
+          <tr>
+            <td>${service}</td>
+            <td>$${cost.toFixed(2)}</td>
+            <td>${percentage}%</td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      modalBody.innerHTML = html;
     }
     
     window.closeModal = function() {
