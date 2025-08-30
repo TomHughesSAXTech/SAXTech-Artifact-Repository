@@ -2035,9 +2035,9 @@
                     // Kubernetes data from API - check kubernetesBackup for cluster info
                     if (data.kubernetesBackup?.enabled) {
                         document.getElementById('aksCount').textContent = '1'; // We have one AKS cluster
-                        document.getElementById('k8sNodes').textContent = data.kubernetes?.totalNodes || '3';
-                        document.getElementById('k8sCpu').textContent = data.kubernetes?.avgCpuUsage ? `${data.kubernetes.avgCpuUsage}%` : '45%';
-                        document.getElementById('k8sMemory').textContent = data.kubernetes?.avgMemoryUsage ? `${data.kubernetes.avgMemoryUsage}%` : '62%';
+                        document.getElementById('k8sNodes').textContent = data.kubernetes?.totalNodes || '0';
+                        document.getElementById('k8sCpu').textContent = data.kubernetes?.avgCpuUsage ? `${data.kubernetes.avgCpuUsage}%` : 'N/A';
+                        document.getElementById('k8sMemory').textContent = data.kubernetes?.avgMemoryUsage ? `${data.kubernetes.avgMemoryUsage}%` : 'N/A';
                         
                         const k8sStatusBadge = document.getElementById('k8sStatusBadge');
                         k8sStatusBadge.textContent = 'Active';
@@ -2312,52 +2312,38 @@
             primaryResourceSelect.innerHTML = '<option value="">Loading resources...</option>';
             resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
             
-            try {
-                // Fetch resources from the Azure Function API
-                const response = await fetch(`https://saxtech-metrics-api.azurewebsites.net/api/resources?resourceGroup=${resourceGroup}`);
+            // For now, just provide some basic options based on resource group
+            // The /api/resources endpoint doesn't exist
+            primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
+            resourceCheckboxesDiv.style.display = 'block';
+            resourceListDiv.innerHTML = '';
+            
+            // Provide some common resources based on resource group
+            if (resourceGroup === 'SAXTech-AI') {
+                primaryResourceSelect.innerHTML += `
+                    <option value="https://saxtechartifacts.z13.web.core.windows.net">SAXTech-Artifacts (Static Web App)</option>
+                    <option value="https://saxtech-metrics-api.azurewebsites.net">saxtech-metrics-api (Function App)</option>
+                `;
                 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch resources: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const resources = data.resources || [];
-                
-                // Update primary resource dropdown
-                primaryResourceSelect.innerHTML = '<option value="">Select Primary Front-End</option>';
-                
-                // Filter for front-end capable resources
-                const frontEndResources = resources.filter(r => 
-                    r.url !== null && r.url !== undefined
-                );
-                
-                frontEndResources.forEach(resource => {
-                    primaryResourceSelect.innerHTML += `<option value="${resource.url}">${resource.name} (${resource.type})</option>`;
-                });
-                
-                // Update resource checkboxes with all resources
-                resourceCheckboxesDiv.style.display = 'block';
-                resourceListDiv.innerHTML = '';
-                
-                if (resources.length === 0) {
-                    resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--sax-text-dim);">No resources found in this resource group</div>';
-                } else {
-                    resources.forEach((resource, index) => {
-                        const checkboxItem = document.createElement('div');
-                        checkboxItem.className = 'resource-checkbox-item';
-                        checkboxItem.innerHTML = `
-                            <input type="checkbox" id="resource-${index}" name="resources" value="${resource.id}" data-name="${resource.name}">
-                            <label class="resource-checkbox-label" for="resource-${index}">${resource.name}</label>
-                            <span class="resource-type-badge">${resource.type}</span>
-                        `;
-                        resourceListDiv.appendChild(checkboxItem);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading resources:', error);
-                primaryResourceSelect.innerHTML = '<option value="">Failed to load resources</option>';
-                resourceCheckboxesDiv.style.display = 'none';
-                showToast('Failed to load resources: ' + error.message, 'error');
+                resourceListDiv.innerHTML = `
+                    <div class="resource-checkbox-item">
+                        <input type="checkbox" id="resource-1" name="resources" value="saxtechartifacts" data-name="saxtechartifacts">
+                        <label class="resource-checkbox-label" for="resource-1">saxtechartifacts</label>
+                        <span class="resource-type-badge">Storage</span>
+                    </div>
+                    <div class="resource-checkbox-item">
+                        <input type="checkbox" id="resource-2" name="resources" value="saxtech-metrics-api" data-name="saxtech-metrics-api">
+                        <label class="resource-checkbox-label" for="resource-2">saxtech-metrics-api</label>
+                        <span class="resource-type-badge">Function</span>
+                    </div>
+                    <div class="resource-checkbox-item">
+                        <input type="checkbox" id="resource-3" name="resources" value="aks-saxtech-prod" data-name="aks-saxtech-prod">
+                        <label class="resource-checkbox-label" for="resource-3">aks-saxtech-prod</label>
+                        <span class="resource-type-badge">AKS</span>
+                    </div>
+                `;
+            } else {
+                resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--sax-text-dim);">Select SAXTech-AI resource group to see resources</div>';
             }
         }
         

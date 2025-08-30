@@ -495,13 +495,14 @@
         html += '<p class="muted">No SSL certificate data available</p>';
       } else {
         sslCertificates.forEach(cert => {
-          const statusClass = cert.daysRemaining <= 30 ? 'expiring' : 'valid';
+          const daysRemaining = cert.daysUntilExpiry || cert.daysRemaining || 0;
+          const statusClass = daysRemaining <= 30 ? 'expiring' : 'valid';
           html += `
             <div class="ssl-card">
               <div class="ssl-header">
                 <div class="ssl-domain">${cert.domain}</div>
                 <div class="ssl-status ${statusClass}">
-                  ${cert.daysRemaining <= 30 ? `Expires in ${cert.daysRemaining} days` : 'Valid'}
+                  ${daysRemaining <= 30 ? `Expires in ${daysRemaining} days` : 'Valid'}
                 </div>
               </div>
               <div class="ssl-details">
@@ -510,19 +511,29 @@
                   <div class="ssl-detail-value">${cert.issuer}</div>
                 </div>
                 <div class="ssl-detail">
-                  <div class="ssl-detail-label">Valid From:</div>
-                  <div class="ssl-detail-value">${new Date(cert.validFrom).toLocaleDateString()}</div>
+                  <div class="ssl-detail-label">Issued Date:</div>
+                  <div class="ssl-detail-value">${new Date(cert.issuedDate || cert.validFrom).toLocaleDateString()}</div>
                 </div>
                 <div class="ssl-detail">
-                  <div class="ssl-detail-label">Valid Until:</div>
-                  <div class="ssl-detail-value">${new Date(cert.validUntil).toLocaleDateString()}</div>
+                  <div class="ssl-detail-label">Expiry Date:</div>
+                  <div class="ssl-detail-value">${new Date(cert.expiryDate || cert.validUntil).toLocaleDateString()}</div>
                 </div>
                 <div class="ssl-detail">
                   <div class="ssl-detail-label">Days Remaining:</div>
-                  <div class="ssl-detail-value ${cert.daysRemaining <= 30 ? 'warning' : ''}">${cert.daysRemaining} days</div>
+                  <div class="ssl-detail-value ${daysRemaining <= 30 ? 'warning' : ''}">${daysRemaining} days</div>
+                </div>
+                ${cert.attachedTo && cert.attachedTo.length > 0 ? `
+                <div class="ssl-detail">
+                  <div class="ssl-detail-label">Attached To:</div>
+                  <div class="ssl-detail-value">${cert.attachedTo.join(', ')}</div>
+                </div>
+                ` : ''}
+                <div class="ssl-detail">
+                  <div class="ssl-detail-label">Auto Renew:</div>
+                  <div class="ssl-detail-value">${cert.autoRenew ? 'Yes' : 'No'}</div>
                 </div>
               </div>
-              ${cert.daysRemaining <= 30 ? `
+              ${daysRemaining <= 30 ? `
                 <div style="margin-top: 12px;">
                   <button class="btn" onclick="renewSSL('${cert.domain}')">🔄 Renew Certificate</button>
                 </div>
@@ -585,21 +596,39 @@
       
       if (type === 'mtd') {
         html = '<h3>Month-to-Date Cost Breakdown by Service</h3>';
-        const breakdown = metricsData.costs.costBreakdown || {};
-        const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+        const serviceBreakdown = metricsData.costs.serviceBreakdown || {};
+        const sorted = Object.entries(serviceBreakdown).sort((a, b) => b[1].cost - a[1].cost);
         
         if (sorted.length > 0) {
-          sorted.forEach(([service, cost]) => {
-            const percentage = ((cost / metricsData.costs.monthToDate) * 100).toFixed(1);
+          sorted.forEach(([service, data]) => {
             html += `
               <div class="breakdown-item">
                 <div>
                   <div class="breakdown-label">${service}</div>
-                  <div class="breakdown-meta">${percentage}% of total</div>
+                  <div class="breakdown-meta">${data.percentage}% of total</div>
                 </div>
-                <div class="breakdown-value">$${cost.toFixed(2)}</div>
+                <div class="breakdown-value">$${data.cost.toFixed(2)}</div>
               </div>
             `;
+          });
+          
+          // Show individual resources
+          html += '<h3 style="margin-top: 20px;">Resources by Service</h3>';
+          sorted.forEach(([service, data]) => {
+            if (data.resources && data.resources.length > 0) {
+              html += `<h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--primary);">${service}</h4>`;
+              data.resources.forEach(resource => {
+                html += `
+                  <div class="breakdown-item">
+                    <div>
+                      <div class="breakdown-label">${resource.name}</div>
+                      <div class="breakdown-meta">${resource.type}</div>
+                    </div>
+                    <div class="breakdown-value">$${resource.cost.toFixed(2)}</div>
+                  </div>
+                `;
+              });
+            }
           });
         } else {
           html += '<p class="muted">No cost breakdown data available</p>';
@@ -1365,10 +1394,10 @@
       if (metricsData?.sslCertificates) {
         const sslCerts = metricsData.sslCertificates;
         
-        const expiringSoon = sslCerts.filter(c => c.daysRemaining <= 30).length;
-        const valid = sslCerts.filter(c => c.daysRemaining > 30).length;
-        const nextExpiry = Math.min(...sslCerts.map(c => c.daysRemaining));
-        const nextExpiryDomain = sslCerts.find(c => c.daysRemaining === nextExpiry)?.domain;
+        const expiringSoon = sslCerts.filter(c => (c.daysUntilExpiry || c.daysRemaining || 0) <= 30).length;
+        const valid = sslCerts.filter(c => (c.daysUntilExpiry || c.daysRemaining || 0) > 30).length;
+        const nextExpiry = Math.min(...sslCerts.map(c => c.daysUntilExpiry || c.daysRemaining || 999));
+        const nextExpiryDomain = sslCerts.find(c => (c.daysUntilExpiry || c.daysRemaining) === nextExpiry)?.domain;
         
         document.getElementById('ssl_count').textContent = sslCerts.length;
         document.getElementById('ssl_expiring').textContent = expiringSoon;
