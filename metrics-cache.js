@@ -104,7 +104,7 @@ class MetricsCache {
     async preloadMetrics() {
         console.log('Preloading metrics...');
         // Only include endpoints that actually exist
-        const endpoints = ['metrics', 'resourceGroups'];
+        const endpoints = ['metrics'];
         
         const promises = endpoints.map(endpoint => 
             this.getMetrics(endpoint).catch(err => {
