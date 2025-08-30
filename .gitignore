@@ -1,1 +1,42 @@
+# Node modules
 api/node_modules/
+azure-functions/node_modules/
+node_modules/
+
+# Deployment and logs
+LogFiles/
+deployments/
+*.log
+
+# Archives and backups
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Test files
+test_*.html
+test-*.html
+*test*.html
+
+# Duplicate files
+* 2.*
+* copy.*
+*.backup
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Azure specific
+.deployment
+.funcignore
+local.settings.json

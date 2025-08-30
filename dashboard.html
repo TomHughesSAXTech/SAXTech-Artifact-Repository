@@ -656,12 +656,159 @@
       showModal('kubernetesModal');
     }
 
-    // Backup Details Modal
+    // Backup Details Modal - Enhanced with new metrics
     function showBackupDetails() {
-      if (!metricsData || !metricsData.backupStatus) return;
+      if (!metricsData) return;
       
       const body = document.getElementById('backupBody');
-      const backup = metricsData.backupStatus;
+      let html = '<h3>Backup Status Overview</h3>';
+      
+      // GitHub Backups Section
+      if (metricsData.githubBackups) {
+        const github = metricsData.githubBackups;
+        html += `
+          <div class="backup-vault">
+            <div class="backup-header">
+              <div class="cluster-name">📦 GitHub Repository Backups</div>
+              <div class="status-badge ${github.lastRunStatus === 'Success' ? 'active' : 'error'}">
+                ${github.lastRunStatus || github.status}
+              </div>
+            </div>
+            <div class="resource-details">
+              <div class="resource-detail">
+                <div class="resource-detail-label">Repository:</div>
+                <div class="resource-detail-value">
+                  <a href="${github.url}" target="_blank" class="resource-endpoint">${github.repository}</a>
+                </div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Last Backup:</div>
+                <div class="resource-detail-value">${new Date(github.lastRun).toLocaleString('en-US', {timeZone: 'America/New_York'})}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Static Web Apps:</div>
+                <div class="resource-detail-value">${github.staticWebApps?.backed || 0} / ${github.staticWebApps?.total || 0}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Function Apps:</div>
+                <div class="resource-detail-value">${github.functionApps?.backed || 0} / ${github.functionApps?.total || 0}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Total Size:</div>
+                <div class="resource-detail-value">${github.totalBackupSize || 'N/A'}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Schedule:</div>
+                <div class="resource-detail-value">${github.backupFrequency || 'Daily'}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Kubernetes Backup Section
+      if (metricsData.kubernetesBackup) {
+        const k8s = metricsData.kubernetesBackup;
+        html += `
+          <div class="backup-vault">
+            <div class="backup-header">
+              <div class="cluster-name">☸️ Kubernetes Cluster Backup</div>
+              <div class="status-badge ${k8s.lastBackupStatus === 'Completed' ? 'active' : 'error'}">
+                ${k8s.status}
+              </div>
+            </div>
+            <div class="resource-details">
+              <div class="resource-detail">
+                <div class="resource-detail-label">Provider:</div>
+                <div class="resource-detail-value">${k8s.provider}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Portal:</div>
+                <div class="resource-detail-value">
+                  <a href="${k8s.url}" target="_blank" class="resource-endpoint">View in Azure Portal ↗</a>
+                </div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Last Backup:</div>
+                <div class="resource-detail-value">${new Date(k8s.lastBackup).toLocaleString('en-US', {timeZone: 'America/New_York'})}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Status:</div>
+                <div class="resource-detail-value">${k8s.lastBackupStatus}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Backup Size:</div>
+                <div class="resource-detail-value">${k8s.backupSize}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Total Backups:</div>
+                <div class="resource-detail-value">${k8s.totalBackups}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Retention:</div>
+                <div class="resource-detail-value">${k8s.retentionDays} days</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Namespaces:</div>
+                <div class="resource-detail-value">${k8s.namespaces?.join(', ') || 'All'}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // PostgreSQL Maintenance Section  
+      if (metricsData.postgresqlMaintenance) {
+        const pg = metricsData.postgresqlMaintenance;
+        html += `
+          <div class="backup-vault">
+            <div class="backup-header">
+              <div class="cluster-name">🐘 PostgreSQL Maintenance</div>
+              <div class="status-badge ${pg.lastMaintenanceStatus === 'Success' ? 'active' : 'error'}">
+                ${pg.status}
+              </div>
+            </div>
+            <div class="resource-details">
+              <div class="resource-detail">
+                <div class="resource-detail-label">Database:</div>
+                <div class="resource-detail-value">${pg.database}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Version:</div>
+                <div class="resource-detail-value">${pg.version}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Last Maintenance:</div>
+                <div class="resource-detail-value">${new Date(pg.lastMaintenance).toLocaleString('en-US', {timeZone: 'America/New_York'})}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Maintenance Status:</div>
+                <div class="resource-detail-value">${pg.lastMaintenanceStatus}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Last Backup:</div>
+                <div class="resource-detail-value">${new Date(pg.lastBackup).toLocaleString('en-US', {timeZone: 'America/New_York'})}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Backup Status:</div>
+                <div class="resource-detail-value">${pg.lastBackupStatus}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Backup Size:</div>
+                <div class="resource-detail-value">${pg.backupSize}</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Maintenance Window:</div>
+                <div class="resource-detail-value">${pg.maintenanceWindow}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Legacy backup data fallback
+      if (metricsData.backupStatus) {
+        const backup = metricsData.backupStatus;
       
       let html = `<h3>Backup Status Overview</h3>`;
       html += `
@@ -937,13 +1084,46 @@
         document.getElementById('k8s_cpu').textContent = '0%';
       }
       
-      // Backup status
-      if (data.backupStatus) {
-        document.getElementById('backup_status').textContent = data.backupStatus.summary.status;
-        document.getElementById('backup_items').textContent = data.backupStatus.summary.totalProtectedItems;
-        document.getElementById('backup_jobs').textContent = 
-          `${data.backupStatus.summary.successfulJobs} success / ${data.backupStatus.summary.failedJobs} failed`;
+    // Backup status - using new enhanced metrics structure
+    if (data.githubBackups || data.kubernetesBackup || data.postgresqlMaintenance) {
+      // Determine overall backup status
+      const githubStatus = data.githubBackups?.lastRunStatus === 'Success';
+      const k8sStatus = data.kubernetesBackup?.lastBackupStatus === 'Completed';
+      const pgStatus = data.postgresqlMaintenance?.lastBackupStatus === 'Success';
+      
+      const allGood = githubStatus && k8sStatus && pgStatus;
+      const anyFailed = !githubStatus || !k8sStatus || !pgStatus;
+      
+      const statusEl = document.getElementById('backup_status');
+      statusEl.textContent = allGood ? 'Healthy' : anyFailed ? 'Warning' : 'Active';
+      statusEl.className = `value clickable ${allGood ? 'status-good' : anyFailed ? 'status-warn' : ''}`;
+      
+      // Count protected items
+      let protectedItems = 0;
+      if (data.githubBackups) {
+        protectedItems += (data.githubBackups.staticWebApps?.total || 0) + (data.githubBackups.functionApps?.total || 0);
       }
+      if (data.kubernetesBackup?.enabled) protectedItems += 1;
+      if (data.postgresqlMaintenance) protectedItems += 1;
+      
+      document.getElementById('backup_items').textContent = protectedItems;
+      
+      // Show last backup times
+      const lastBackups = [];
+      if (data.githubBackups?.lastRun) {
+        lastBackups.push(`GitHub: ${new Date(data.githubBackups.lastRun).toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'})}`);
+      }
+      if (data.kubernetesBackup?.lastBackup) {
+        lastBackups.push(`K8s: ${new Date(data.kubernetesBackup.lastBackup).toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'})}`);
+      }
+      document.getElementById('backup_jobs').textContent = lastBackups.join(' | ') || 'No recent backups';
+    } else if (data.backupStatus) {
+      // Fallback to old structure if available
+      document.getElementById('backup_status').textContent = data.backupStatus.summary.status;
+      document.getElementById('backup_items').textContent = data.backupStatus.summary.totalProtectedItems;
+      document.getElementById('backup_jobs').textContent = 
+        `${data.backupStatus.summary.successfulJobs} success / ${data.backupStatus.summary.failedJobs} failed`;
+    }
       
       // Storage
       if (data.storage) {

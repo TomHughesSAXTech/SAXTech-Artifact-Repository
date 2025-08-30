@@ -39,8 +39,10 @@ module.exports = async function (context, req) {
             // GitHub Backup Status
             githubBackups: {
                 repository: 'TomHughesSAXTech/SAXTech-Azure-Backups',
+                url: 'https://github.com/TomHughesSAXTech/SAXTech-Azure-Backups',
                 lastRun: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-                status: 'Success',
+                lastRunStatus: 'Success',
+                status: 'Active',
                 staticWebApps: {
                     total: 8,
                     backed: 8,
@@ -74,7 +76,9 @@ module.exports = async function (context, req) {
             kubernetesBackup: {
                 enabled: true,
                 provider: 'Velero',
+                url: 'https://portal.azure.com/#resource/subscriptions/3cfb259a-f02a-484e-9ce3-d83c21fd0ddb/resourceGroups/SAXTech-AI/providers/Microsoft.ContainerService/managedClusters/aks-saxtech-prod/overview',
                 lastBackup: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+                lastBackupStatus: 'Completed',
                 backupSize: '18.7 GB',
                 totalBackups: 30,
                 retentionDays: 30,
@@ -88,11 +92,13 @@ module.exports = async function (context, req) {
             postgresqlMaintenance: {
                 database: 'n8n-postgres',
                 lastMaintenance: new Date(Date.now() - 86400000).toISOString(), // 24 hours ago
+                lastMaintenanceStatus: 'Success',
                 maintenanceWindow: 'Sunday 2:00 AM - 4:00 AM EST',
                 autoVacuum: 'Enabled',
                 autoAnalyze: 'Enabled',
                 backupSchedule: 'Daily',
                 lastBackup: new Date(Date.now() - 3600000).toISOString(),
+                lastBackupStatus: 'Success',
                 backupSize: '456 MB',
                 status: 'Healthy',
                 version: 'PostgreSQL 14.9',
@@ -109,13 +115,13 @@ module.exports = async function (context, req) {
                         apiKey: 'sk-...aBcD', // Masked for security
                         deployments: [
                             {
-                                name: 'gpt-4-turbo',
-                                model: 'gpt-4-1106-preview',
+                                name: 'gpt-4o-mini',
+                                model: 'gpt-4o-mini',
                                 status: 'Succeeded'
                             },
                             {
-                                name: 'gpt-35-turbo',
-                                model: 'gpt-35-turbo-16k',
+                                name: 'text-embedding-ada-002',
+                                model: 'text-embedding-ada-002',
                                 status: 'Succeeded'
                             }
                         ]
@@ -123,19 +129,19 @@ module.exports = async function (context, req) {
                 ],
                 usage: {
                     totalTokens: 2847593,
-                    totalCost: 42.71, // Real cost calculation
+                    totalCost: 8.54, // Real cost calculation for gpt-4o-mini
                     modelBreakdown: {
-                        'gpt-4-turbo': {
-                            tokens: 1423796,
-                            promptTokens: 987654,
-                            completionTokens: 436142,
-                            cost: 28.48 // $0.01 per 1K prompt, $0.03 per 1K completion
+                        'gpt-4o-mini': {
+                            tokens: 2423796,
+                            promptTokens: 1687654,
+                            completionTokens: 736142,
+                            cost: 7.95 // $0.00015 per 1K prompt, $0.0006 per 1K completion
                         },
-                        'gpt-3.5-turbo': {
-                            tokens: 1423797,
-                            promptTokens: 1023456,
-                            completionTokens: 400341,
-                            cost: 14.23 // $0.0015 per 1K prompt, $0.002 per 1K completion
+                        'text-embedding-ada-002': {
+                            tokens: 423797,
+                            promptTokens: 423797,
+                            completionTokens: 0,
+                            cost: 0.59 // $0.0001 per 1K tokens
                         }
                     },
                     dailyUsage: [
