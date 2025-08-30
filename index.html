@@ -1016,6 +1016,7 @@
     <script src="blob-integration.js"></script>
     <script src="azure-integration.js"></script>
     <script src="n8n-integration.js"></script>
+    <script src="metrics-cache.js"></script>
 </head>
 <body>
     <div class="noise-overlay"></div>
@@ -1980,20 +1981,11 @@
         // Load Azure infrastructure status
         async function loadInfrastructureStatus() {
             try {
-                // Fetch metrics from the standalone Azure Function
-                const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
-                });
+                // Use cached metrics to avoid cold starts
+                const data = window.metricsCache ? 
+                    await window.metricsCache.getMetrics('metrics') :
+                    await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics').then(r => r.json());
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
                 console.log('Azure metrics received:', data);
                 
                 // Update Azure Resources card
