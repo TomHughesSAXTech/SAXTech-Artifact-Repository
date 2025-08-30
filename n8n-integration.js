@@ -104,13 +104,44 @@ class N8NIntegration {
             const jsonString = JSON.stringify(workflowData, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             
-            // Generate filename
-            const filename = `n8n_workflow_${workflowData.name || parsed.workflowId}_${Date.now()}.json`;
+            // Generate consistent filename (no timestamp to avoid duplicates)
+            const filename = `n8n_workflow_${workflowData.name || parsed.workflowId}.json`;
             
-            // Store in blob storage (overwrite if exists)
+            // Store in blob storage - check for existing artifact first
             if (window.blobManager) {
-                const file = new File([blob], filename, { type: 'application/json' });
-                await window.blobManager.uploadFile(file, projectId, 'N8N', true); // true = overwrite
+                const project = window.blobManager.projects.find(p => String(p.id) === String(projectId));
+                if (project) {
+                    // Check if artifact with this name already exists
+                    const existingArtifactIndex = project.artifacts.findIndex(a => 
+                        a.name === filename || 
+                        (a.name && a.name.startsWith(`n8n_workflow_${workflowData.name || parsed.workflowId}`))
+                    );
+                    
+                    if (existingArtifactIndex >= 0) {
+                        // Update existing artifact
+                        project.artifacts[existingArtifactIndex] = {
+                            name: filename,
+                            type: 'N8N',
+                            icon: '⚙️',
+                            size: `${(blob.size / 1024).toFixed(2)} KB`,
+                            uploadDate: new Date().toISOString(),
+                            workflowId: parsed.workflowId
+                        };
+                    } else {
+                        // Add new artifact
+                        project.artifacts.push({
+                            name: filename,
+                            type: 'N8N',
+                            icon: '⚙️',
+                            size: `${(blob.size / 1024).toFixed(2)} KB`,
+                            uploadDate: new Date().toISOString(),
+                            workflowId: parsed.workflowId
+                        });
+                    }
+                    
+                    // Save updated project
+                    await window.blobManager.saveProjectsToBlob();
+                }
             }
             
             console.log(`Synced N8N workflow: ${workflowData.name}`);
