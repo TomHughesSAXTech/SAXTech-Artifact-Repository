@@ -1261,13 +1261,13 @@
         document.getElementById('count_swa').textContent = data.githubBackups.staticWebApps.total;
       }
       
-      // Function Apps from functionApps array or githubBackups
-      if (data.functionApps && Array.isArray(data.functionApps)) {
-        document.getElementById('count_func').textContent = data.functionApps.length;
-        document.getElementById('func_active').textContent = data.functionApps.length;
-      } else if (data.githubBackups?.functionApps?.total !== undefined) {
+      // Function Apps - prioritize githubBackups which has the accurate count
+      if (data.githubBackups?.functionApps?.total !== undefined) {
         document.getElementById('count_func').textContent = data.githubBackups.functionApps.total;
         document.getElementById('func_active').textContent = data.githubBackups.functionApps.total;
+      } else if (data.functionApps && Array.isArray(data.functionApps)) {
+        document.getElementById('count_func').textContent = data.functionApps.length;
+        document.getElementById('func_active').textContent = data.functionApps.length;
       }
       
       // Storage Accounts from storageAccounts array
@@ -1283,17 +1283,43 @@
         document.getElementById('func_last_run').textContent = 'Running';
       }
       
-      // Kubernetes - only show actual data
-      if (data.kubernetes) {
+      // Kubernetes - check kubernetesBackup first then kubernetes data
+      if (data.kubernetesBackup?.enabled) {
+        // We have Kubernetes backup enabled, so we have at least 1 cluster
+        document.getElementById('k8s_count').textContent = '1';
+        // Use kubernetes data if available for nodes/cpu
+        if (data.kubernetes?.totalNodes !== undefined) {
+          document.getElementById('k8s_nodes').textContent = data.kubernetes.totalNodes;
+        } else {
+          document.getElementById('k8s_nodes').textContent = '0';
+        }
+        if (data.kubernetes?.avgCpuUsage !== undefined) {
+          document.getElementById('k8s_cpu').textContent = `${data.kubernetes.avgCpuUsage}%`;
+        } else {
+          document.getElementById('k8s_cpu').textContent = '0%';
+        }
+      } else if (data.kubernetes && Object.keys(data.kubernetes).length > 0) {
+        // Fall back to kubernetes data if it exists and has content
         if (data.kubernetes.clusterCount !== undefined) {
           document.getElementById('k8s_count').textContent = data.kubernetes.clusterCount;
+        } else {
+          document.getElementById('k8s_count').textContent = '0';
         }
         if (data.kubernetes.totalNodes !== undefined) {
           document.getElementById('k8s_nodes').textContent = data.kubernetes.totalNodes;
+        } else {
+          document.getElementById('k8s_nodes').textContent = '0';
         }
         if (data.kubernetes.avgCpuUsage !== undefined) {
           document.getElementById('k8s_cpu').textContent = `${data.kubernetes.avgCpuUsage}%`;
+        } else {
+          document.getElementById('k8s_cpu').textContent = '0%';
         }
+      } else {
+        // No Kubernetes data at all
+        document.getElementById('k8s_count').textContent = '0';
+        document.getElementById('k8s_nodes').textContent = '0';
+        document.getElementById('k8s_cpu').textContent = '0%';
       }
       
       // Backup status - only show real data
@@ -1343,25 +1369,28 @@
         let archiveSize = 0;
         
         data.storageAccounts.forEach(account => {
-          totalSize += (account.totalSize || 0);
-          totalBlobs += (account.blobCount || 0);
+          // Check if totalSize is a number, if not it might be 'N/A' or null
+          if (typeof account.totalSize === 'number') {
+            totalSize += account.totalSize;
+          }
+          if (typeof account.blobCount === 'number') {
+            totalBlobs += account.blobCount;
+          }
           
           // Aggregate tier data if available
-          if (account.containers) {
+          if (account.containers && Array.isArray(account.containers)) {
             account.containers.forEach(container => {
-              if (container.tier === 'Hot') hotSize += (container.size || 0);
-              else if (container.tier === 'Cool') coolSize += (container.size || 0);
-              else if (container.tier === 'Archive') archiveSize += (container.size || 0);
+              const size = typeof container.size === 'number' ? container.size : 0;
+              if (container.tier === 'Hot') hotSize += size;
+              else if (container.tier === 'Cool') coolSize += size;
+              else if (container.tier === 'Archive') archiveSize += size;
             });
           }
         });
         
-        if (totalSize > 0) {
-          document.getElementById('storage_used').textContent = formatBytes(totalSize);
-        }
-        if (totalBlobs > 0) {
-          document.getElementById('storage_blobs').textContent = totalBlobs;
-        }
+        // Always show the values, even if 0
+        document.getElementById('storage_used').textContent = formatBytes(totalSize);
+        document.getElementById('storage_blobs').textContent = totalBlobs;
         
         // Show tier breakdown
         document.getElementById('storage_tiers').textContent = 
