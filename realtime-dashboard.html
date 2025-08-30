@@ -1009,7 +1009,8 @@
       let totalCost = 0;
       
       costData.properties.rows.forEach(row => {
-        let service = row[0] || 'Unknown';
+        // Ensure service is a string
+        let service = String(row[0] || 'Unknown');
         const cost = row[1] || 0;
         
         // Map numeric or short service names to readable names
@@ -1028,7 +1029,7 @@
         }
         
         if (!serviceData[service]) {
-          serviceData[service] = { cost: 0, count: 0, originalName: row[0] };
+          serviceData[service] = { cost: 0, count: 0, originalName: String(row[0] || 'Unknown') };
         }
         serviceData[service].cost += cost;
         serviceData[service].count++;
