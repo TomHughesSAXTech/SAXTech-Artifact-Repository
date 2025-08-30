@@ -687,10 +687,22 @@
 
     // Enhanced Resource Breakdown Modal with Function App Details
     function showResourceBreakdown(type) {
-      if (!metricsData || !metricsData.resourceDetails) return;
+      if (!metricsData) return;
       
       const body = document.getElementById('resourceBreakdownBody');
-      const resources = metricsData.resourceDetails[type] || [];
+      let resources = [];
+      
+      // Get resources based on type from actual API structure
+      if (type === 'staticSites') {
+        // Get static sites from githubBackups or costs breakdown
+        if (metricsData.githubBackups?.staticWebApps?.list) {
+          resources = metricsData.githubBackups.staticWebApps.list.map(name => ({ name, location: 'East US' }));
+        }
+      } else if (type === 'functionApps') {
+        resources = metricsData.functionApps || [];
+      } else if (type === 'storageAccounts') {
+        resources = metricsData.storageAccounts || [];
+      }
       
       let html = `<h3>${type === 'staticSites' ? 'Static Web Apps' : type === 'functionApps' ? 'Function Apps' : 'Storage Accounts'}</h3>`;
       
@@ -1214,24 +1226,32 @@
         }
       }
       
-      // Resource counts - only show actual data
-      if (data.resources) {
-        if (data.resources.staticSites !== undefined) {
-          document.getElementById('count_swa').textContent = data.resources.staticSites;
-        }
-        if (data.resources.functionApps !== undefined) {
-          document.getElementById('count_func').textContent = data.resources.functionApps;
-          document.getElementById('func_active').textContent = data.resources.functionApps;
-        }
-        if (data.resources.storageAccounts !== undefined) {
-          document.getElementById('count_sa').textContent = data.resources.storageAccounts;
-        }
+      // Resource counts - use actual API structure
+      // Static Web Apps from githubBackups
+      if (data.githubBackups?.staticWebApps?.total !== undefined) {
+        document.getElementById('count_swa').textContent = data.githubBackups.staticWebApps.total;
       }
       
-      // Function app last run - only if data exists
-      if (data.resourceDetails?.functionApps?.[0]?.lastRun) {
-        const lastRun = new Date(data.resourceDetails.functionApps[0].lastRun);
+      // Function Apps from functionApps array or githubBackups
+      if (data.functionApps && Array.isArray(data.functionApps)) {
+        document.getElementById('count_func').textContent = data.functionApps.length;
+        document.getElementById('func_active').textContent = data.functionApps.length;
+      } else if (data.githubBackups?.functionApps?.total !== undefined) {
+        document.getElementById('count_func').textContent = data.githubBackups.functionApps.total;
+        document.getElementById('func_active').textContent = data.githubBackups.functionApps.total;
+      }
+      
+      // Storage Accounts from storageAccounts array
+      if (data.storageAccounts && Array.isArray(data.storageAccounts)) {
+        document.getElementById('count_sa').textContent = data.storageAccounts.length;
+      }
+      
+      // Function app last run - use functionApps array
+      if (data.functionApps && data.functionApps[0]?.lastExecution) {
+        const lastRun = new Date(data.functionApps[0].lastExecution);
         document.getElementById('func_last_run').textContent = lastRun.toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'});
+      } else if (data.functionApps && data.functionApps.length > 0) {
+        document.getElementById('func_last_run').textContent = 'Running';
       }
       
       // Kubernetes - only show actual data
@@ -1285,14 +1305,26 @@
           `${data.backupStatus.summary.successfulJobs} success / ${data.backupStatus.summary.failedJobs} failed`;
       }
       
-      // Storage - only real data
-      if (data.storage?.accounts) {
+      // Storage - use storageAccounts array
+      if (data.storageAccounts && Array.isArray(data.storageAccounts)) {
         let totalSize = 0;
         let totalBlobs = 0;
+        let hotSize = 0;
+        let coolSize = 0;
+        let archiveSize = 0;
         
-        data.storage.accounts.forEach(account => {
-          totalSize += (account.totalSizeGB || 0) * 1024 * 1024 * 1024;
-          totalBlobs += account.blobCount || 0;
+        data.storageAccounts.forEach(account => {
+          totalSize += (account.totalSize || 0);
+          totalBlobs += (account.blobCount || 0);
+          
+          // Aggregate tier data if available
+          if (account.containers) {
+            account.containers.forEach(container => {
+              if (container.tier === 'Hot') hotSize += (container.size || 0);
+              else if (container.tier === 'Cool') coolSize += (container.size || 0);
+              else if (container.tier === 'Archive') archiveSize += (container.size || 0);
+            });
+          }
         });
         
         if (totalSize > 0) {
@@ -1302,13 +1334,9 @@
           document.getElementById('storage_blobs').textContent = totalBlobs;
         }
         
-        // Only show tier breakdown if we have actual tier data
-        if (data.storage.tierBreakdown) {
-          const hot = data.storage.tierBreakdown.hot || 0;
-          const cool = data.storage.tierBreakdown.cool || 0;
-          const archive = data.storage.tierBreakdown.archive || 0;
-          document.getElementById('storage_tiers').textContent = `Hot: ${hot}GB, Cool: ${cool}GB, Archive: ${archive}GB`;
-        }
+        // Show tier breakdown
+        document.getElementById('storage_tiers').textContent = 
+          `Hot: ${formatBytes(hotSize)}, Cool: ${formatBytes(coolSize)}, Archive: ${formatBytes(archiveSize)}`;
       }
       
       // GPT usage - only real data
