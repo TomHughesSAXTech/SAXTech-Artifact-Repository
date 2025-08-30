@@ -683,24 +683,40 @@
       showMessage('Loading real-time data from Azure...', 'info');
       
       try {
-        // Get all data in parallel
-        const [mtdData, yesterdayData, todayData, weekData, resources, resourceGroups] = await Promise.all([
-          getCostData('MonthToDate'),
-          getCostForDateRange(getYesterdayDate(), getYesterdayDate()),
-          getCostForDateRange(getTodayDate(), getTodayDate()),
-          getCostData('TheLastWeek'),
+        // Get resources first (these usually work)
+        const [resources, resourceGroups] = await Promise.all([
           getResources(),
           getResourceGroups()
         ]);
-
-        // Update cost cards
-        updateCostCards(mtdData, yesterdayData, todayData, weekData);
         
-        // Update resource counts
+        // Update resource counts immediately
         updateResourceCounts(resources, resourceGroups);
         
-        // Update detailed tables
-        updateCostBreakdown(mtdData);
+        // Then try to get cost data (may fail due to permissions)
+        let mtdData, weekData;
+        try {
+          [mtdData, weekData] = await Promise.all([
+            getCostData('MonthToDate'),
+            getCostData('TheLastWeek')
+          ]);
+          
+          // Update cost cards with available data
+          if (mtdData || weekData) {
+            updateCostCards(mtdData, null, null, weekData);
+            updateCostBreakdown(mtdData);
+          }
+        } catch (costError) {
+          console.error('Cost API error (this may be due to permissions):', costError);
+          showMessage('Note: Cost data requires Cost Management Reader role', 'error');
+          // Set default values for cost displays
+          document.getElementById('mtdCost').textContent = 'N/A';
+          document.getElementById('yesterdayCost').textContent = 'N/A';
+          document.getElementById('todayCost').textContent = 'N/A';
+          document.getElementById('weekCost').textContent = 'N/A';
+          document.getElementById('costBreakdownTable').innerHTML = '<tr><td colspan="5" style="text-align: center;">Cost data requires Cost Management Reader role</td></tr>';
+        }
+        
+        // Update resources table
         updateResourcesTable(resources);
 
         showMessage('Data refreshed successfully!', 'success');
