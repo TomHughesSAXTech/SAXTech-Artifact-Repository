@@ -54,16 +54,16 @@ class N8NIntegration {
     
     // Fetch workflow data from N8N API
     async fetchWorkflow(workflowId, baseUrl = null) {
-        // Use Azure Functions proxy to avoid CORS issues
-        const proxyUrl = 'https://saxtech-metrics-api.azurewebsites.net/api/n8nproxy';
+        // Now using direct URL with CORS properly configured via NGINX
+        const apiUrl = baseUrl || this.baseUrl || 'https://workflows.saxtechnology.com';
         
         if (!this.apiKey) {
             throw new Error('N8N API key not configured');
         }
         
         try {
-            // Use the proxy endpoint instead of direct n8n call
-            const response = await fetch(`${proxyUrl}/workflows/${workflowId}`, {
+            // Direct API call - CORS is now handled by NGINX ingress
+            const response = await fetch(`${apiUrl}/api/v1/workflows/${workflowId}`, {
                 headers: {
                     'X-N8N-API-KEY': this.apiKey,
                     'Accept': 'application/json'
