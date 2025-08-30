@@ -683,9 +683,9 @@
 
     // Rate limiting configuration
     const rateLimitConfig = {
-      costApiDelay: 2000, // 2 seconds between Cost API calls
+      costApiDelay: 5000, // 5 seconds between Cost API calls (increased from 2s)
       maxRetries: 3,
-      retryDelay: 5000 // 5 seconds between retries
+      retryDelay: 10000 // 10 seconds between retries (increased from 5s)
     };
     
     let lastCostApiCall = 0;
@@ -854,20 +854,20 @@
           // Get MTD data first
           mtdData = await getCostData('MonthToDate');
           
-          // Small delay before next call
-          await sleep(1000);
+          // Longer delay to avoid rate limiting
+          await sleep(3000);
           
           // Get weekly data
           weekData = await getCostData('TheLastWeek');
           
-          // Small delay before next call
-          await sleep(1000);
+          // Longer delay to avoid rate limiting
+          await sleep(3000);
           
           // Get yesterday's data
           yesterdayData = await getCostForDateRange(getYesterdayDate(), getYesterdayDate());
           
-          // Small delay before next call
-          await sleep(1000);
+          // Longer delay to avoid rate limiting
+          await sleep(3000);
           
           // Get today's data
           todayData = await getCostForDateRange(getTodayDate(), getTodayDate());
@@ -1187,8 +1187,8 @@
       }
     }
 
-    // Drill-down Functions
-    async function drillDownService(serviceId, serviceName, cost) {
+    // Drill-down Functions (make them global so onclick can access them)
+    window.drillDownService = async function(serviceId, serviceName, cost) {
       const modal = document.getElementById('detailModal');
       const modalTitle = document.getElementById('modalTitle');
       const modalBody = document.getElementById('modalBody');
@@ -1302,7 +1302,7 @@
       }
     }
     
-    async function drillDownResource(resourceId, resourceName, cost) {
+    window.drillDownResource = async function(resourceId, resourceName, cost) {
       const modal = document.getElementById('detailModal');
       const modalTitle = document.getElementById('modalTitle');
       const modalBody = document.getElementById('modalBody');
@@ -1398,7 +1398,7 @@
       }
     }
     
-    function closeModal() {
+    window.closeModal = function() {
       const modal = document.getElementById('detailModal');
       modal.classList.remove('active');
     }
