@@ -559,9 +559,33 @@
       }
     }
 
-    // Azure API Helper
-    async function callAzureAPI(endpoint, options = {}) {
+    // Rate limiting configuration
+    const rateLimitConfig = {
+      costApiDelay: 2000, // 2 seconds between Cost API calls
+      maxRetries: 3,
+      retryDelay: 5000 // 5 seconds between retries
+    };
+    
+    let lastCostApiCall = 0;
+    
+    // Sleep function for delays
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Azure API Helper with retry logic
+    async function callAzureAPI(endpoint, options = {}, retryCount = 0) {
       try {
+        // Rate limiting for Cost Management API
+        if (endpoint.includes('/providers/Microsoft.CostManagement/')) {
+          const now = Date.now();
+          const timeSinceLastCall = now - lastCostApiCall;
+          if (timeSinceLastCall < rateLimitConfig.costApiDelay) {
+            await sleep(rateLimitConfig.costApiDelay - timeSinceLastCall);
+          }
+          lastCostApiCall = Date.now();
+        }
+        
         const token = await getAccessToken();
         const response = await fetch(`https://management.azure.com${endpoint}`, {
           ...options,
@@ -573,6 +597,13 @@
         });
 
         if (!response.ok) {
+          // Handle rate limiting (429)
+          if (response.status === 429 && retryCount < rateLimitConfig.maxRetries) {
+            console.log(`Rate limited. Retrying in ${rateLimitConfig.retryDelay}ms... (Attempt ${retryCount + 1}/${rateLimitConfig.maxRetries})`);
+            await sleep(rateLimitConfig.retryDelay);
+            return callAzureAPI(endpoint, options, retryCount + 1);
+          }
+          
           // Try to get error details from response
           let errorMessage = `${response.status} ${response.statusText}`;
           try {
@@ -692,18 +723,25 @@
         // Update resource counts immediately
         updateResourceCounts(resources, resourceGroups);
         
-        // Then try to get cost data (may fail due to permissions)
+        // Then try to get cost data sequentially (to avoid rate limiting)
         let mtdData, weekData;
         try {
-          [mtdData, weekData] = await Promise.all([
-            getCostData('MonthToDate'),
-            getCostData('TheLastWeek')
-          ]);
+          showMessage('Loading cost data (this may take a moment due to API rate limits)...', 'info');
+          
+          // Get MTD data first
+          mtdData = await getCostData('MonthToDate');
+          
+          // Small delay before next call
+          await sleep(1000);
+          
+          // Get weekly data
+          weekData = await getCostData('TheLastWeek');
           
           // Update cost cards with available data
           if (mtdData || weekData) {
             updateCostCards(mtdData, null, null, weekData);
             updateCostBreakdown(mtdData);
+            showMessage('Cost data loaded successfully!', 'success');
           }
         } catch (costError) {
           console.error('Cost API error (this may be due to permissions):', costError);
