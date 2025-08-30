@@ -1562,10 +1562,13 @@
       // Get projects for MRR calculation - only real data
       const projects = window.blobManager?.getProjects();
       
+      let mrr = 0;
+      let impl = 0;
+      
       if (projects && projects.length > 0) {
-        const mrr = projects.filter(p => p.status === 'Active')
-                            .reduce((sum, p) => sum + (p.mrr || 0), 0);
-        const impl = projects.filter(p => {
+        mrr = projects.filter(p => p.status === 'Active')
+                      .reduce((sum, p) => sum + (p.mrr || 0), 0);
+        impl = projects.filter(p => {
           const created = new Date(p.created || Date.now());
           const thisMonth = new Date();
           return created.getMonth() === thisMonth.getMonth() && 

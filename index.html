@@ -1340,7 +1340,7 @@
                     <input type="url" class="form-input" id="githubUrl" placeholder="https://github.com/saxtech/...">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">N8N Workflow URLs</label>
+                    <label class="form-label">SAXTech Automation Engine URLs</label>
                     <input type="url" class="form-input" id="n8nMainUrl" placeholder="Main workflow URL (e.g., https://workflows.saxtechnology.com/workflow/123)">
                     <div style="margin-top: 10px;">
                         <textarea class="form-textarea" id="n8nSubUrls" placeholder="Additional workflow URLs (one per line)" style="min-height: 80px;"></textarea>
@@ -1438,7 +1438,7 @@
                     <input type="url" class="form-input" id="editGithubUrl" placeholder="https://github.com/saxtech/...">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">N8N Workflow URLs</label>
+                    <label class="form-label">SAXTech Automation Engine URLs</label>
                     <input type="url" class="form-input" id="editN8nMainUrl" placeholder="Main workflow URL (e.g., https://workflows.saxtechnology.com/workflow/123)">
                     <div style="margin-top: 10px;">
                         <textarea class="form-textarea" id="editN8nSubUrls" placeholder="Additional workflow URLs (one per line)" style="min-height: 80px;"></textarea>
@@ -1501,7 +1501,7 @@
                         <option value="">Select artifact type</option>
                         <option value="SOW">Statement of Work (SOW)</option>
                         <option value="ROI">ROI Analysis</option>
-                        <option value="N8N">N8N Workflow (JSON)</option>
+                        <option value="SAXTech Automation">SAXTech Automation Workflow (JSON)</option>
                         <option value="ClientData">Client Data</option>
                         <option value="Documentation">Technical Documentation</option>
                         <option value="Architecture">Architecture Diagrams</option>
@@ -1627,7 +1627,7 @@
                             <div class="artifact-meta">
                                 <span class="artifact-type">${artifact.type}</span>
                                 <span class="artifact-size">${artifact.size}</span>
-                                ${artifact.type === 'N8N' ? 
+                                ${(artifact.type === 'N8N' || artifact.type === 'SAXTech Automation') ? 
                                     `<button class="btn-icon-small" onclick="downloadN8NWorkflow('${project.id}', '${artifact.name}'); event.stopPropagation();" title="Download JSON">
                                         <span style="font-size: 12px;">⬇️</span>
                                     </button>` : ''}
@@ -2013,9 +2013,9 @@
                 // Update Azure Resources card
                 if (data) {
                     // Resource counts
-                    document.getElementById('staticWebAppCount').textContent = data.resources?.staticSites || '6';
-                    document.getElementById('functionAppCount').textContent = data.resources?.functionApps || '5';
-                    document.getElementById('storageAccountCount').textContent = data.resources?.storageAccounts || '5';
+                    document.getElementById('staticWebAppCount').textContent = data.resources?.staticSites || '0';
+                    document.getElementById('functionAppCount').textContent = data.resources?.functionApps || '0';
+                    document.getElementById('storageAccountCount').textContent = data.resources?.storageAccounts || '0';
                     
                     // Cost data
                     const mtdCost = data.costs?.monthToDate || 101.30;
@@ -2501,10 +2501,10 @@
                         project = {
                             id: Date.now() + savedCount,
                             name: workflow.name,
-                            client: 'N8N Workflow',
+                            client: 'SAXTech Automation',
                             type: 'Standard Automation',
                             status: workflow.active ? 'Live in Production' : 'Design',
-                            description: `N8N Workflow: ${workflow.name}`,
+                            description: `SAXTech Automation Workflow: ${workflow.name}`,
                             n8nWorkflowId: workflow.id,
                             artifacts: [],
                             created: new Date().toISOString()
@@ -2517,9 +2517,9 @@
                     if (!artifactExists) {
                         project.artifacts.push({
                             name: `${workflow.name}.json`,
-                            type: 'N8N',
+                            type: 'SAXTech Automation',
                             icon: '⚙️',
-                            size: 'N8N Workflow',
+                            size: 'SAXTech Workflow',
                             uploadDate: new Date().toISOString(),
                             n8nId: workflow.id
                         });
