@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Force Refresh - Live Azure Metrics</title>
+  <style>
+    body {
+      background: #0a0e27;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #00d4ff; }
+    .info-card {
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0,212,255,0.1);
+    }
+    .metric:last-child { border-bottom: none; }
+    .label { color: #94a3b8; }
+    .value {
+      font-weight: 700;
+      font-size: 24px;
+      color: #00d4ff;
+      font-family: monospace;
+    }
+    .timestamp {
+      color: #f59e0b;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    button {
+      background: linear-gradient(135deg, #00d4ff, #7c3aed);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+    .error { color: #ef4444; }
+    .success { color: #10b981; }
+    #status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔄 Force Refresh - Azure Metrics Direct</h1>
+  
+  <div id="status">Initializing...</div>
+  
+  <button onclick="fetchMetrics(true)">🔄 Force Refresh Now</button>
+  <button onclick="clearAllCaches()">🗑️ Clear All Caches</button>
+  <button onclick="compareData()">🔍 Compare with Dashboard</button>
+  
+  <div class="info-card">
+    <h2>Live API Data (No Cache)</h2>
+    <div class="metric">
+      <span class="label">Month-to-Date Cost</span>
+      <span class="value" id="mtd">Loading...</span>
+    </div>
+    <div class="metric">
+      <span class="label">Yesterday's Cost</span>
+      <span class="value" id="yesterday">Loading...</span>
+    </div>
+    <div class="metric">
+      <span class="label">Today's Cost (Live)</span>
+      <span class="value" id="today">Loading...</span>
+    </div>
+    <div class="metric">
+      <span class="label">Function Apps</span>
+      <span class="value" id="funcApps">Loading...</span>
+    </div>
+    <div class="metric">
+      <span class="label">Static Web Apps</span>
+      <span class="value" id="staticApps">Loading...</span>
+    </div>
+    <div class="metric">
+      <span class="label">Storage Accounts</span>
+      <span class="value" id="storage">Loading...</span>
+    </div>
+    <div class="timestamp" id="timestamp"></div>
+    <div class="timestamp" id="apiTimestamp"></div>
+  </div>
+  
+  <div class="info-card">
+    <h2>Data Source Information</h2>
+    <div id="sourceInfo"></div>
+  </div>
+
+  <div class="info-card">
+    <h2>Raw API Response</h2>
+    <pre id="rawData" style="overflow-x: auto; font-size: 12px;"></pre>
+  </div>
+
+  <script>
+    async function fetchMetrics(force = false) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = 'Fetching fresh data from API...';
+      statusEl.className = '';
+      
+      try {
+        // Add cache-busting parameter
+        const timestamp = Date.now();
+        const url = `https://saxtech-metrics-api.azurewebsites.net/api/metrics?_t=${timestamp}&force=${force}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update display
+        document.getElementById('mtd').textContent = `$${(data.costs?.monthToDate || 0).toFixed(2)}`;
+        document.getElementById('yesterday').textContent = `$${(data.costs?.yesterday || 0).toFixed(2)}`;
+        document.getElementById('today').textContent = `$${(data.costs?.today || 0).toFixed(2)}`;
+        
+        // Resource counts
+        const funcApps = data.githubBackups?.functionApps?.total || 
+                        (data.functionApps ? data.functionApps.length : 0);
+        const staticApps = data.githubBackups?.staticWebApps?.total || 0;
+        const storageAccounts = data.storageAccounts ? data.storageAccounts.length : 0;
+        
+        document.getElementById('funcApps').textContent = funcApps;
+        document.getElementById('staticApps').textContent = staticApps;
+        document.getElementById('storage').textContent = storageAccounts;
+        
+        // Timestamps
+        const localTime = new Date().toLocaleString('en-US', {timeZone: 'America/New_York'});
+        document.getElementById('timestamp').textContent = `Fetched at: ${localTime} EST`;
+        document.getElementById('apiTimestamp').textContent = `API Timestamp: ${data.timestampEST || 'N/A'}`;
+        
+        // Source info
+        const sourceInfo = document.getElementById('sourceInfo');
+        sourceInfo.innerHTML = `
+          <div class="metric">
+            <span class="label">API Endpoint</span>
+            <span style="color: #00d4ff; font-family: monospace; font-size: 12px;">${url}</span>
+          </div>
+          <div class="metric">
+            <span class="label">Response Time</span>
+            <span style="color: #10b981;">${Date.now() - timestamp}ms</span>
+          </div>
+          <div class="metric">
+            <span class="label">Data Keys</span>
+            <span style="color: #7c3aed;">${Object.keys(data).join(', ')}</span>
+          </div>
+        `;
+        
+        // Raw data
+        document.getElementById('rawData').textContent = JSON.stringify(data, null, 2);
+        
+        statusEl.textContent = '✅ Data fetched successfully! (No cache used)';
+        statusEl.className = 'success';
+        
+        // Store for comparison
+        window.latestApiData = data;
+        
+      } catch (error) {
+        statusEl.textContent = `❌ Error: ${error.message}`;
+        statusEl.className = 'error';
+        console.error('Fetch error:', error);
+      }
+    }
+    
+    function clearAllCaches() {
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // Try to clear service worker caches
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+      
+      // Unregister service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => registration.unregister());
+        });
+      }
+      
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = '🗑️ All caches cleared! Refresh the page.';
+      statusEl.className = 'success';
+    }
+    
+    async function compareData() {
+      const statusEl = document.getElementById('status');
+      
+      try {
+        // Fetch dashboard page
+        const dashResponse = await fetch('/dashboard.html?v=5&_t=' + Date.now(), {
+          cache: 'no-cache'
+        });
+        const dashHTML = await dashResponse.text();
+        
+        // Check what's in the HTML
+        const mtdMatch = dashHTML.match(/\$(\d+\.?\d*)/);
+        
+        if (mtdMatch && window.latestApiData) {
+          const dashboardValue = parseFloat(mtdMatch[1]);
+          const apiValue = window.latestApiData.costs?.monthToDate || 0;
+          
+          if (Math.abs(dashboardValue - apiValue) > 0.01) {
+            statusEl.textContent = `⚠️ Mismatch: Dashboard shows $${dashboardValue}, API returns $${apiValue}`;
+            statusEl.className = 'error';
+          } else {
+            statusEl.textContent = `✅ Dashboard and API values match: $${apiValue}`;
+            statusEl.className = 'success';
+          }
+        } else {
+          statusEl.textContent = 'Could not compare values. Fetch metrics first.';
+        }
+      } catch (error) {
+        statusEl.textContent = `Compare error: ${error.message}`;
+        statusEl.className = 'error';
+      }
+    }
+    
+    // Fetch on load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchMetrics(true);
+      
+      // Auto-refresh every 30 seconds
+      setInterval(() => fetchMetrics(true), 30000);
+    });
+  </script>
+</body>
+</html>
