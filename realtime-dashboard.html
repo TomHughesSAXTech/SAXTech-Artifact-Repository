@@ -587,11 +587,22 @@
       auth: {
         clientId: 'c1a20824-c427-46f0-a819-53d657d6ea7f', // SAXTech Real-Time Dashboard App
         authority: 'https://login.microsoftonline.com/3d659328-eef0-44f7-8481-5833e1051aec',
-        redirectUri: window.location.origin + '/realtime-dashboard.html'
+        // Use the specific domain to avoid redirect URI mismatch
+        redirectUri: 'https://repository.saxtechnology.com/realtime-dashboard.html',
+        navigateToLoginRequestUrl: false // Prevent automatic navigation to avoid loops
       },
       cache: {
         cacheLocation: 'localStorage',
-        storeAuthStateInCookie: false
+        storeAuthStateInCookie: true // Enable cookie storage for better compatibility
+      },
+      system: {
+        loggerOptions: {
+          loggerCallback: (level, message, containsPii) => {
+            if (containsPii) return;
+            console.log(message);
+          },
+          logLevel: msal.LogLevel.Warning
+        }
       }
     };
 
