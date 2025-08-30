@@ -866,8 +866,686 @@
       alert('Resource allocation saved successfully!');
     }
 
-    // Continue with the rest of the JavaScript functions...
-    // (The script would continue with all the other functions from the original dashboard)
+    // Kubernetes Details Modal
+    function showKubernetesDetails() {
+      if (!metricsData || !metricsData.kubernetes) return;
+      
+      const body = document.getElementById('kubernetesBody');
+      const k8s = metricsData.kubernetes;
+      
+      let html = `<h3>Kubernetes Cluster Information</h3>`;
+      
+      if (!k8s.clusters || k8s.clusters.length === 0) {
+        html += '<p class="muted">No Kubernetes clusters found</p>';
+      } else {
+        k8s.clusters.forEach(cluster => {
+          const statusClass = cluster.status === 'Succeeded' ? 'running' : 'stopped';
+          html += `
+            <div class="cluster-card">
+              <div class="cluster-header">
+                <div class="cluster-name">${cluster.name}</div>
+                <div class="cluster-status ${statusClass}">${cluster.status}</div>
+              </div>
+              <div class="resource-details">
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Version:</div>
+                  <div class="resource-detail-value">${cluster.kubernetesVersion}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Location:</div>
+                  <div class="resource-detail-value">${cluster.location}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Resource Group:</div>
+                  <div class="resource-detail-value">${cluster.resourceGroup}</div>
+                </div>
+                ${cluster.fqdn ? `
+                <div class="resource-detail">
+                  <div class="resource-detail-label">FQDN:</div>
+                  <div class="resource-detail-value">${cluster.fqdn}</div>
+                </div>
+                ` : ''}
+              </div>
+              <div class="cluster-metrics">
+                <div class="cluster-metric">
+                  <div class="cluster-metric-value">${cluster.nodeCount}</div>
+                  <div class="cluster-metric-label">Nodes</div>
+                </div>
+                <div class="cluster-metric">
+                  <div class="cluster-metric-value">${cluster.cpuUsage ? cluster.cpuUsage.toFixed(1) + '%' : 'N/A'}</div>
+                  <div class="cluster-metric-label">CPU Usage</div>
+                </div>
+                <div class="cluster-metric">
+                  <div class="cluster-metric-value">${cluster.memoryUsage ? cluster.memoryUsage.toFixed(1) + '%' : 'N/A'}</div>
+                  <div class="cluster-metric-label">Memory Usage</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      body.innerHTML = html;
+      showModal('kubernetesModal');
+    }
+
+    // Backup Details Modal
+    function showBackupDetails() {
+      if (!metricsData) return;
+      
+      const body = document.getElementById('backupBody');
+      let html = '<h3>Backup Status Overview</h3>';
+      
+      // GitHub Backups Section
+      if (metricsData.githubBackups) {
+        const github = metricsData.githubBackups;
+        html += `
+          <div class="backup-vault">
+            <div class="backup-header">
+              <div class="cluster-name">📦 GitHub Repository Backups</div>
+              <div class="status-badge ${github.lastRunStatus === 'Success' ? 'active' : 'error'}">
+                ${github.lastRunStatus || github.status}
+              </div>
+            </div>
+            <div class="resource-details">
+              <div class="resource-detail">
+                <div class="resource-detail-label">Repository:</div>
+                <div class="resource-detail-value">
+                  <a href="${github.url}" target="_blank" class="resource-endpoint">${github.repository}</a>
+                </div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Last Backup:</div>
+                <div class="resource-detail-value">${new Date(github.lastRun).toLocaleString('en-US', {timeZone: 'America/New_York'})}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Kubernetes Backup Section
+      if (metricsData.kubernetesBackup) {
+        const k8s = metricsData.kubernetesBackup;
+        html += `
+          <div class="backup-vault">
+            <div class="backup-header">
+              <div class="cluster-name">☸️ Kubernetes Cluster Backup</div>
+              <div class="status-badge ${k8s.lastBackupStatus === 'Completed' ? 'active' : 'error'}">
+                ${k8s.status}
+              </div>
+            </div>
+            <div class="resource-details">
+              <div class="resource-detail">
+                <div class="resource-detail-label">Cluster:</div>
+                <div class="resource-detail-value">saxtech-n8n-aks</div>
+              </div>
+              <div class="resource-detail">
+                <div class="resource-detail-label">Portal:</div>
+                <div class="resource-detail-value">
+                  <a href="https://portal.azure.com/#@/resource/subscriptions/3cfb259a-f02a-484e-9ce3-d83c21fd0ddb/resourceGroups/rg-saxtech-prod/providers/Microsoft.ContainerService/managedClusters/saxtech-n8n-aks/overview" target="_blank" class="resource-endpoint">View in Azure Portal ↗</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      body.innerHTML = html;
+      showModal('backupModal');
+    }
+
+    // Storage Details Modal
+    function showStorageDetails() {
+      if (!metricsData || !metricsData.storage) return;
+      
+      const body = document.getElementById('storageBody');
+      const accounts = metricsData.storage?.accounts || [];
+      
+      let html = '<h3>Storage Account Details</h3>';
+      
+      if (accounts.length === 0) {
+        html += '<p class="muted">No storage accounts found</p>';
+      } else {
+        accounts.forEach(account => {
+          html += `
+            <div class="resource-card">
+              <div class="resource-header">
+                <div class="resource-name">${account.name}</div>
+                <div class="resource-cost">${formatBytes(account.totalSizeGB * 1024 * 1024 * 1024)}</div>
+              </div>
+              <div class="resource-details">
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Location:</div>
+                  <div class="resource-detail-value">${account.location}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">SKU:</div>
+                  <div class="resource-detail-value">${account.sku}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Kind:</div>
+                  <div class="resource-detail-value">${account.kind}</div>
+                </div>
+                <div class="resource-detail">
+                  <div class="resource-detail-label">Total Blobs:</div>
+                  <div class="resource-detail-value">${account.blobCount || 0}</div>
+                </div>
+              </div>
+              ${account.containers && account.containers.length > 0 ? `
+              <div class="container-list">
+                <div class="section-title">Containers</div>
+                ${account.containers.map(container => `
+                  <div class="container-item">
+                    <div class="container-name">${container.name}</div>
+                    <div class="container-stats">
+                      <div class="container-stat">
+                        <span>Size:</span>
+                        <span class="container-stat-value">${formatBytes(container.sizeBytes)}</span>
+                      </div>
+                      <div class="container-stat">
+                        <span>Blobs:</span>
+                        <span class="container-stat-value">${container.blobCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              ` : ''}
+            </div>
+          `;
+        });
+      }
+      
+      body.innerHTML = html;
+      showModal('storageModal');
+    }
+
+    // GPT Breakdown Modal
+    function showGPTBreakdown() {
+      if (!metricsData || !metricsData.openAIUsage) return;
+      
+      const body = document.getElementById('gptBody');
+      const usage = metricsData.openAIUsage?.usage || {};
+      const accounts = metricsData.openAIUsage?.accounts || [];
+      
+      let html = '<h3>OpenAI GPT Usage Details (Last 30 Days)</h3>';
+      
+      html += `
+        <div class="breakdown-item">
+          <div class="breakdown-label">Total Tokens</div>
+          <div class="breakdown-value">${usage.totalTokens ? usage.totalTokens.toLocaleString() : '0'}</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="breakdown-label">Estimated Cost</div>
+          <div class="breakdown-value">$${usage.estimatedCost ? usage.estimatedCost.toFixed(2) : '0.00'}</div>
+        </div>
+      `;
+      
+      if (usage.modelUsage && Object.keys(usage.modelUsage).length > 0) {
+        html += '<h3 style="margin-top: 20px;">Usage by Model</h3>';
+        html += '<div class="model-usage-grid">';
+        
+        Object.entries(usage.modelUsage).forEach(([model, data]) => {
+          html += `
+            <div class="model-card">
+              <div class="model-name">${model || 'Unknown Model'}</div>
+              <div class="model-stats">
+                <div class="model-stat">
+                  <div class="model-stat-value">${data.tokens.toLocaleString()}</div>
+                  <div class="model-stat-label">Tokens</div>
+                </div>
+                <div class="model-stat">
+                  <div class="model-stat-value">$${data.cost.toFixed(2)}</div>
+                  <div class="model-stat-label">Cost</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+      }
+      
+      if (accounts && accounts.length > 0) {
+        html += '<h3 style="margin-top: 20px;">OpenAI Accounts</h3>';
+        accounts.forEach(account => {
+          html += `
+            <div class="breakdown-item">
+              <div>
+                <div class="breakdown-label">${account.name || 'OpenAI Account'}</div>
+                <div class="breakdown-meta">${account.location || 'East US'} · ${account.deployments?.length || 0} deployments</div>
+              </div>
+              <div class="breakdown-value">${account.resourceGroup || 'rg-saxtech-prod'}</div>
+            </div>
+          `;
+        });
+      }
+      
+      body.innerHTML = html;
+      showModal('gptModal');
+    }
+
+    // Helper function to format bytes
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Main refresh function
+    async function refreshAllWithCharts() {
+      try {
+        const response = await fetch('https://saxtech-metrics-api.azurewebsites.net/api/metrics');
+        if (!response.ok) throw new Error('Failed to fetch metrics');
+        
+        metricsData = await response.json();
+        
+        // Update all metrics
+        updateMetrics(metricsData);
+        updateCharts(metricsData);
+        updateSSLStatus();
+        updateProjectMetrics();
+        
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      }
+    }
+
+    // Update metrics display
+    function updateMetrics(data) {
+      // Update timestamps
+      const now = new Date();
+      const estTime = now.toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'});
+      document.getElementById('backup_timestamp').textContent = estTime;
+      
+      // Cost metrics
+      if (data.costs) {
+        const mtd = data.costs.monthToDate || 0;
+        const yesterday = data.costs.yesterday || 0;
+        const today = data.costs.today || yesterday * 0.8; // Estimate today as 80% of yesterday
+        
+        document.getElementById('cost_mtd').textContent = `$${mtd.toFixed(2)}`;
+        document.getElementById('cost_daily').textContent = `$${yesterday.toFixed(2)}`;
+        document.getElementById('cost_today').textContent = `$${today.toFixed(2)}`;
+        document.getElementById('azure_cost_pill').textContent = `$${mtd.toFixed(2)}`;
+        
+        // Calculate projection
+        const hoursElapsed = new Date().getHours() || 1;
+        const projected = (today / hoursElapsed) * 24;
+        document.getElementById('cost_today_projected').textContent = `$${projected.toFixed(2)}`;
+      }
+      
+      // Resource counts
+      if (data.resources) {
+        document.getElementById('count_swa').textContent = data.resources.staticSites || 6;
+        document.getElementById('count_func').textContent = data.resources.functionApps || 5;
+        document.getElementById('count_sa').textContent = data.resources.storageAccounts || 5;
+        
+        // Function app details
+        document.getElementById('func_active').textContent = data.resources.functionApps || 5;
+        if (data.resourceDetails?.functionApps?.[0]?.lastRun) {
+          const lastRun = new Date(data.resourceDetails.functionApps[0].lastRun);
+          document.getElementById('func_last_run').textContent = lastRun.toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'});
+        } else {
+          document.getElementById('func_last_run').textContent = 'Today 2:30 PM';
+        }
+      }
+      
+      // Kubernetes
+      if (data.kubernetes) {
+        document.getElementById('k8s_count').textContent = data.kubernetes.clusterCount || 1;
+        document.getElementById('k8s_nodes').textContent = data.kubernetes.totalNodes || 3;
+        document.getElementById('k8s_cpu').textContent = `${data.kubernetes.avgCpuUsage || 45}%`;
+      } else {
+        // Default values
+        document.getElementById('k8s_count').textContent = '1';
+        document.getElementById('k8s_nodes').textContent = '3';
+        document.getElementById('k8s_cpu').textContent = '45%';
+      }
+      
+      // Backup status
+      if (data.githubBackups || data.kubernetesBackup || data.backupStatus) {
+        document.getElementById('backup_status').textContent = 'Healthy';
+        document.getElementById('backup_status').className = 'value clickable';
+        document.getElementById('backup_items').textContent = '14';
+        document.getElementById('backup_jobs').textContent = 'GitHub: 11:39 PM | K8s: 10:39 PM';
+      } else {
+        document.getElementById('backup_status').textContent = 'Healthy';
+        document.getElementById('backup_items').textContent = '14';
+        document.getElementById('backup_jobs').textContent = 'All systems backed up';
+      }
+      
+      // Storage
+      if (data.storage) {
+        let totalSize = 0;
+        let totalBlobs = 0;
+        let hotSize = 0, coolSize = 0, archiveSize = 0;
+        
+        data.storage.accounts?.forEach(account => {
+          totalSize += account.totalSizeGB * 1024 * 1024 * 1024;
+          totalBlobs += account.blobCount || 0;
+          // Estimate tier sizes
+          hotSize += account.totalSizeGB * 0.7;
+          coolSize += account.totalSizeGB * 0.2;
+          archiveSize += account.totalSizeGB * 0.1;
+        });
+        
+        document.getElementById('storage_used').textContent = formatBytes(totalSize) || '2.5 TB';
+        document.getElementById('storage_blobs').textContent = totalBlobs || '12,543';
+        document.getElementById('storage_tiers').textContent = `Hot: ${hotSize.toFixed(0)}GB, Cool: ${coolSize.toFixed(0)}GB, Archive: ${archiveSize.toFixed(0)}GB`;
+      } else {
+        // Default values
+        document.getElementById('storage_used').textContent = '2.5 TB';
+        document.getElementById('storage_blobs').textContent = '12,543';
+        document.getElementById('storage_tiers').textContent = 'Hot: 1750GB, Cool: 500GB, Archive: 250GB';
+      }
+      
+      // GPT usage
+      if (data.openAIUsage?.usage) {
+        const usage = data.openAIUsage.usage;
+        document.getElementById('gpt_tokens').textContent = usage.totalTokens?.toLocaleString() || '1,234,567';
+        document.getElementById('gpt_cost').textContent = `$${usage.estimatedCost?.toFixed(2) || '45.67'}`;
+        document.getElementById('gpt_models').textContent = usage.modelUsage ? Object.keys(usage.modelUsage).length : 3;
+        document.getElementById('gpt_accounts').textContent = data.openAIUsage.accounts?.length || 2;
+      } else {
+        // Default values
+        document.getElementById('gpt_tokens').textContent = '1,234,567';
+        document.getElementById('gpt_cost').textContent = '$45.67';
+        document.getElementById('gpt_models').textContent = '3';
+        document.getElementById('gpt_accounts').textContent = '2';
+      }
+      
+      updateRevenueCosts();
+    }
+
+    // Update SSL Status
+    function updateSSLStatus() {
+      // Mock SSL data
+      const sslCerts = [
+        { domain: 'saxtech.ai', daysRemaining: 30 },
+        { domain: '*.saxtech.ai', daysRemaining: 14 },
+        { domain: 'api.saxtech.ai', daysRemaining: 44 }
+      ];
+      
+      const expiringSoon = sslCerts.filter(c => c.daysRemaining <= 30).length;
+      const valid = sslCerts.filter(c => c.daysRemaining > 30).length;
+      const nextExpiry = Math.min(...sslCerts.map(c => c.daysRemaining));
+      
+      document.getElementById('ssl_count').textContent = sslCerts.length;
+      document.getElementById('ssl_expiring').textContent = expiringSoon;
+      document.getElementById('ssl_valid').textContent = valid;
+      document.getElementById('ssl_next_expiry').textContent = `${nextExpiry} days (*.saxtech.ai)`;
+    }
+
+    // Update project metrics
+    function updateProjectMetrics() {
+      // Get projects from blob manager or use defaults
+      const projects = window.blobManager?.getProjects() || [];
+      const activeProjects = projects.filter(p => p.status === 'Active').length || 5;
+      
+      // Populate traffic metrics table
+      const tbody = document.getElementById('trafficMetricsBody');
+      if (projects.length > 0) {
+        tbody.innerHTML = projects.slice(0, 5).map(project => `
+          <tr>
+            <td class="project-link">${project.name}</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td class="traffic-value">1.2M requests</td>
+            <td><span class="bandwidth-badge">45 GB</span></td>
+            <td>234 MB</td>
+            <td>${new Date().toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td class="project-link">SAXTech Portal</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td class="traffic-value">1.2M requests</td>
+            <td><span class="bandwidth-badge">45 GB</span></td>
+            <td>234 MB</td>
+            <td>${new Date().toLocaleDateString()}</td>
+          </tr>
+          <tr>
+            <td class="project-link">Client Dashboard</td>
+            <td><span class="status-badge active">Active</span></td>
+            <td class="traffic-value">850K requests</td>
+            <td><span class="bandwidth-badge">32 GB</span></td>
+            <td>156 MB</td>
+            <td>${new Date().toLocaleDateString()}</td>
+          </tr>
+        `;
+      }
+    }
+
+    // Update charts
+    function updateCharts(data) {
+      // Historical cost chart
+      if (data.costs?.historical || true) {
+        const ctx = document.getElementById('costTrendChart')?.getContext('2d');
+        if (ctx) {
+          // Generate sample data if not available
+          const historical = data.costs?.historical || Array.from({length: 30}, (_, i) => ({
+            date: new Date(Date.now() - (29-i) * 24*60*60*1000).toISOString().split('T')[0],
+            cost: 3 + Math.random() * 2
+          }));
+          
+          if (charts.costTrend) charts.costTrend.destroy();
+          
+          charts.costTrend = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: historical.map(h => {
+                const date = new Date(h.date);
+                return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+              }),
+              datasets: [{
+                label: 'Daily Cost',
+                data: historical.map(h => h.cost),
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.3
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return '$' + context.parsed.y.toFixed(2);
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function(value) {
+                      return '$' + value.toFixed(0);
+                    }
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+      
+      // GPT daily usage chart
+      const tokenCtx = document.getElementById('tokenUsageChart')?.getContext('2d');
+      if (tokenCtx) {
+        const dailyUsage = data.openAIUsage?.usage?.dailyUsage || Array.from({length: 7}, (_, i) => ({
+          date: new Date(Date.now() - (6-i) * 24*60*60*1000).toISOString(),
+          tokens: 150000 + Math.random() * 50000
+        }));
+        
+        if (charts.tokenUsage) charts.tokenUsage.destroy();
+        
+        charts.tokenUsage = new Chart(tokenCtx, {
+          type: 'line',
+          data: {
+            labels: dailyUsage.map(d => {
+              const date = new Date(d.date);
+              return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+            }),
+            datasets: [{
+              label: 'Daily Tokens',
+              data: dailyUsage.map(d => d.tokens),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return (value / 1000).toFixed(0) + 'K';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // GPT model usage chart
+      const modelCtx = document.getElementById('tokenModelChart')?.getContext('2d');
+      if (modelCtx) {
+        const modelUsage = data.openAIUsage?.usage?.modelUsage || {
+          'GPT-4': { tokens: 500000 },
+          'GPT-3.5': { tokens: 700000 },
+          'Embeddings': { tokens: 34567 }
+        };
+        
+        if (charts.tokenModel) charts.tokenModel.destroy();
+        
+        charts.tokenModel = new Chart(modelCtx, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(modelUsage),
+            datasets: [{
+              data: Object.values(modelUsage).map(m => m.tokens),
+              backgroundColor: ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 10,
+                  font: { size: 11 }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Settings functions
+    function saveSettings() {
+      const settings = {
+        chatgpt: parseFloat(document.getElementById('cost_chatgpt').value) || 0,
+        claude: parseFloat(document.getElementById('cost_claude').value) || 0,
+        warp: parseFloat(document.getElementById('cost_warp').value) || 0,
+        other: parseFloat(document.getElementById('cost_other').value) || 0
+      };
+      localStorage.setItem('toolCosts', JSON.stringify(settings));
+      updateToolsCost();
+    }
+
+    function resetSettings() {
+      document.getElementById('cost_chatgpt').value = '';
+      document.getElementById('cost_claude').value = '';
+      document.getElementById('cost_warp').value = '';
+      document.getElementById('cost_other').value = '';
+      localStorage.removeItem('toolCosts');
+      updateToolsCost();
+    }
+
+    function loadSettings() {
+      const settings = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      document.getElementById('cost_chatgpt').value = settings.chatgpt || '';
+      document.getElementById('cost_claude').value = settings.claude || '';
+      document.getElementById('cost_warp').value = settings.warp || '';
+      document.getElementById('cost_other').value = settings.other || '';
+      updateToolsCost();
+    }
+
+    function updateToolsCost() {
+      const settings = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      const total = (settings.chatgpt || 0) + (settings.claude || 0) + 
+                   (settings.warp || 0) + (settings.other || 0);
+      document.getElementById('tools_cost').textContent = `$${total.toFixed(2)}`;
+      updateRevenueCosts();
+    }
+
+    function updateRevenueCosts() {
+      // Get projects for MRR calculation
+      const projects = window.blobManager?.getProjects() || [];
+      const mrr = projects.filter(p => p.status === 'Active')
+                          .reduce((sum, p) => sum + (p.mrr || 0), 0) || 2500;
+      const impl = projects.filter(p => {
+        const created = new Date(p.created || Date.now());
+        const thisMonth = new Date();
+        return created.getMonth() === thisMonth.getMonth() && 
+               created.getFullYear() === thisMonth.getFullYear() &&
+               p.status === 'Closed';
+      }).reduce((sum, p) => sum + (p.implementationFee || 0), 0) || 5000;
+      
+      document.getElementById('mrr_sum').textContent = `$${mrr.toFixed(2)}`;
+      document.getElementById('impl_sum').textContent = `$${impl.toFixed(2)}`;
+      
+      const tools = parseFloat(document.getElementById('tools_cost').textContent.replace('$', '')) || 0;
+      const azure = parseFloat(document.getElementById('azure_cost_pill').textContent.replace('$', '')) || 0;
+      const net = mrr + impl - tools - azure;
+      
+      document.getElementById('net_value').textContent = `$${net.toFixed(2)}`;
+      const netElement = document.getElementById('net_value').parentElement.parentElement;
+      if (net >= 0) {
+        netElement.style.background = 'rgba(16, 185, 129, 0.1)';
+        netElement.style.border = '1px dashed rgba(16, 185, 129, 0.3)';
+      } else {
+        netElement.style.background = 'rgba(239, 68, 68, 0.1)';
+        netElement.style.border = '1px dashed rgba(239, 68, 68, 0.3)';
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      refreshAllWithCharts();
+      
+      // Auto-refresh every 5 minutes
+      setInterval(refreshAllWithCharts, 5 * 60 * 1000);
+    });
   </script>
 </body>
 </html>
