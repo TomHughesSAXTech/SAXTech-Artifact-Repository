@@ -573,7 +573,18 @@
         });
 
         if (!response.ok) {
-          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+          // Try to get error details from response
+          let errorMessage = `${response.status} ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error.message || errorData.error.code || errorMessage;
+            }
+            console.error('API Error Details:', errorData);
+          } catch (e) {
+            // Response wasn't JSON
+          }
+          throw new Error(`API Error: ${errorMessage}`);
         }
 
         return await response.json();
@@ -631,12 +642,16 @@
             totalCost: {
               name: 'Cost',
               function: 'Sum'
+            },
+            totalCostUSD: {
+              name: 'CostUSD',
+              function: 'Sum'
             }
           }
         },
         timePeriod: {
-          from: startDate,
-          to: endDate
+          from: startDate + 'T00:00:00Z',
+          to: endDate + 'T23:59:59Z'
         }
       };
 
