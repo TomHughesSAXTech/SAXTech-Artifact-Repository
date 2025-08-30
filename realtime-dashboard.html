@@ -1234,8 +1234,12 @@
         const percentage = ((data.cost / totalCost) * 100).toFixed(1);
         const dailyAvg = (data.cost / new Date().getDate()).toFixed(2);
         
+        // Escape single quotes in strings for onclick
+        const escapedOriginalName = data.originalName.replace(/'/g, "\\'");
+        const escapedService = service.replace(/'/g, "\\'");
+        
         return `
-          <tr style="cursor: pointer;" onclick="drillDownService('${data.originalName}', '${service}', ${data.cost})" title="Click to see details">
+          <tr style="cursor: pointer;" onclick="window.drillDownService('${escapedOriginalName}', '${escapedService}', ${data.cost})" title="Click to see details">
             <td style="color: #00d4ff; text-decoration: underline;">${service}</td>
             <td>${data.count}</td>
             <td>$${data.cost.toFixed(2)}</td>
@@ -1322,15 +1326,21 @@
         .sort((a, b) => b.cost - a.cost)
         .slice(0, 10);
       
-      table.innerHTML = sortedResources.map(resource => `
-        <tr style="cursor: pointer;" onclick="drillDownResource('${resource.id}', '${resource.name}', ${resource.cost})" title="Click to see details">
-          <td style="color: #00d4ff; text-decoration: underline;">${resource.name}</td>
-          <td>${resource.type.split('/').pop()}</td>
-          <td>${resource.resourceGroup}</td>
-          <td>${resource.location}</td>
-          <td>${resource.cost > 0 ? `$${resource.cost.toFixed(2)}` : '--'}</td>
-        </tr>
-      `).join('');
+      table.innerHTML = sortedResources.map(resource => {
+        // Escape single quotes in strings for onclick
+        const escapedId = resource.id.replace(/'/g, "\\'");
+        const escapedName = resource.name.replace(/'/g, "\\'");
+        
+        return `
+          <tr style="cursor: pointer;" onclick="window.drillDownResource('${escapedId}', '${escapedName}', ${resource.cost})" title="Click to see details">
+            <td style="color: #00d4ff; text-decoration: underline;">${resource.name}</td>
+            <td>${resource.type.split('/').pop()}</td>
+            <td>${resource.resourceGroup}</td>
+            <td>${resource.location}</td>
+            <td>${resource.cost > 0 ? `$${resource.cost.toFixed(2)}` : '--'}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     // Helper Functions
