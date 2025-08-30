@@ -957,17 +957,24 @@
           grouping: [
             {
               type: 'Dimension',
-              name: 'ServiceName'
+              name: 'ServiceName'  // This might be returning codes instead of names
             }
           ]
         },
         timeframe: timeframe
       };
 
-      return await callAzureAPI(endpoint, {
+      const result = await callAzureAPI(endpoint, {
         method: 'POST',
         body: JSON.stringify(body)
       });
+      
+      // Log to see what Azure is actually returning
+      if (result?.properties?.rows && result.properties.rows.length > 0) {
+        console.log('Sample service names from Azure:', result.properties.rows.slice(0, 3).map(r => r[0]));
+      }
+      
+      return result;
     }
 
     // Get Custom Date Range Cost
@@ -1238,6 +1245,9 @@
         return;
       }
 
+      // Log the raw data to understand what Azure is returning
+      console.log('Raw cost data rows:', costData.properties.rows.slice(0, 5));
+
       // Aggregate by service
       const serviceData = {};
       let totalCost = 0;
@@ -1247,27 +1257,64 @@
         let service = String(row[0] || 'Unknown');
         const cost = row[1] || 0;
         
-        // Map numeric or short service names to readable names
-        const serviceLower = service.toLowerCase();
-        if (serviceNameMap[service]) {
-          service = serviceNameMap[service];
-        } else if (serviceNameMap[serviceLower]) {
-          service = serviceNameMap[serviceLower];
-        } else if (!isNaN(service)) {
-          // If it's a number, try to give it a better name
-          service = `Azure Service ${service}`;
-        } else {
-          // Try to make the service name more readable
-          service = service.replace(/microsoft\./gi, '')
-                          .replace(/[_-]/g, ' ')
-                          .split(' ')
-                          .filter(word => word.length > 0)
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                          .join(' ');
+        // First, check if this looks like a decimal number (common Azure pattern)
+        if (/^\d+\.\d+$/.test(service) || /^\d+$/.test(service)) {
+          // Try to map common decimal codes to services
+          const serviceCode = parseFloat(service).toFixed(0);
           
-          // If still looks like a code, prefix it
-          if (service.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
-            service = `Azure ${service}`;
+          // Map based on common Azure service codes
+          const decimalServiceMap = {
+            '8': 'Storage',
+            '7': 'Virtual Network',
+            '5': 'Azure DNS',
+            '3': 'Load Balancer',
+            '2': 'Virtual Machines',
+            '1': 'App Service',
+            '0': 'Bandwidth',
+            '4': 'Azure Active Directory',
+            '6': 'Key Vault',
+            '9': 'Azure Monitor',
+            '10': 'Container Registry',
+            '11': 'Azure SQL Database',
+            '12': 'Azure Functions',
+            '13': 'Static Web Apps',
+            '14': 'Application Gateway',
+            '15': 'Azure Firewall'
+          };
+          
+          if (decimalServiceMap[serviceCode]) {
+            service = decimalServiceMap[serviceCode];
+          } else {
+            // For unknown codes, try to be more descriptive
+            service = `Azure Service (Code: ${service})`;
+          }
+        } else {
+          // Try existing mapping
+          const serviceLower = service.toLowerCase();
+          if (serviceNameMap[service]) {
+            service = serviceNameMap[service];
+          } else if (serviceNameMap[serviceLower]) {
+            service = serviceNameMap[serviceLower];
+          } else if (service.includes('.')) {
+            // Handle microsoft.* services
+            service = service.replace(/microsoft\./gi, '')
+                            .replace(/[_-]/g, ' ')
+                            .split(' ')
+                            .filter(word => word.length > 0)
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                            .join(' ');
+          } else {
+            // Clean up any other format
+            service = service.replace(/[_-]/g, ' ')
+                            .split(' ')
+                            .filter(word => word.length > 0)
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                            .join(' ');
+            
+            // If still looks weird, prefix it
+            if (service.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
+              service = `Azure ${service}`;
+            }
           }
         }
         
