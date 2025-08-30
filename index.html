@@ -2180,6 +2180,71 @@
         // Check authentication on page load
         checkAuthentication();
         
+        // Show Project Summary function
+        function showProjectSummary(projectId) {
+            const project = projects.find(p => String(p.id) === String(projectId));
+            if (!project) {
+                showToast('Project not found', 'error');
+                return;
+            }
+            
+            // Create a modal to show project summary
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">${project.name} - Project Summary</h2>
+                        <button class="close-modal" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                        <div class="form-group">
+                            <label class="form-label">Client</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-text);">${project.client}</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Project Type</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-text);">${project.type}</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-text);">${project.status || 'Active'}</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-text); white-space: pre-wrap;">${project.description || 'No description available'}</div>
+                        </div>
+                        ${project.mrr ? `
+                        <div class="form-group">
+                            <label class="form-label">Monthly Recurring Revenue</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-primary); font-weight: 600;">$${project.mrr.toFixed(2)}</div>
+                        </div>
+                        ` : ''}
+                        ${project.implementationFee ? `
+                        <div class="form-group">
+                            <label class="form-label">Implementation Fee</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-primary); font-weight: 600;">$${project.implementationFee.toFixed(2)}</div>
+                        </div>
+                        ` : ''}
+                        ${project.resourceGroup ? `
+                        <div class="form-group">
+                            <label class="form-label">Azure Resource Group</label>
+                            <div style="padding: 10px; background: var(--sax-darker); border-radius: 8px; color: var(--sax-text);">${project.resourceGroup}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                        <button class="btn btn-primary" onclick="editProject('${project.id}'); this.closest('.modal').remove();">Edit Project</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Make showProjectSummary available globally
+        window.showProjectSummary = showProjectSummary;
+        
         // Close modals on outside click
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {

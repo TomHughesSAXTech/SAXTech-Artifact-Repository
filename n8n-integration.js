@@ -105,7 +105,7 @@ class N8NIntegration {
             const blob = new Blob([jsonString], { type: 'application/json' });
             
             // Generate consistent filename (no timestamp to avoid duplicates)
-            const filename = `n8n_workflow_${workflowData.name || parsed.workflowId}.json`;
+            const filename = `workflow_${workflowData.name || parsed.workflowId}.json`;
             
             // Store in blob storage - check for existing artifact first
             if (window.blobManager) {
@@ -114,7 +114,7 @@ class N8NIntegration {
                     // Check if artifact with this name already exists
                     const existingArtifactIndex = project.artifacts.findIndex(a => 
                         a.name === filename || 
-                        (a.name && a.name.startsWith(`n8n_workflow_${workflowData.name || parsed.workflowId}`))
+                        (a.name && a.name.startsWith(`workflow_${workflowData.name || parsed.workflowId}`))
                     );
                     
                     if (existingArtifactIndex >= 0) {
@@ -522,7 +522,7 @@ class N8NIntegration {
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 900px;">
                     <div class="modal-header">
-                        <h2 class="modal-title">N8N Workflow: ${workflowData.name}</h2>
+                        <h2 class="modal-title">SAXTech Automation Engine: ${workflowData.name}</h2>
                         <button class="close-modal" onclick="this.closest('.modal').remove()">×</button>
                     </div>
                     <div style="margin-bottom: 20px;">
