@@ -38,8 +38,8 @@ module.exports = async function (context, req) {
             
             // GitHub Backup Status
             githubBackups: {
-                repository: 'TomHughesSAXTech/SAXTech-Azure-Backups',
-                url: 'https://github.com/TomHughesSAXTech/SAXTech-Azure-Backups',
+                repository: 'TomHughesSAXTech/SAXTech-Repository-Site',
+                url: 'https://github.com/TomHughesSAXTech/SAXTech-Repository-Site',
                 lastRun: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
                 lastRunStatus: 'Success',
                 status: 'Active',
@@ -129,8 +129,8 @@ module.exports = async function (context, req) {
                 ],
                 usage: {
                     totalTokens: 2847593,
-                    totalCost: 8.54, // Real cost calculation for gpt-4o-mini
-                    modelBreakdown: {
+                    estimatedCost: 8.54, // Real cost calculation for gpt-4o-mini
+                    modelUsage: {
                         'gpt-4o-mini': {
                             tokens: 2423796,
                             promptTokens: 1687654,

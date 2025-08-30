@@ -941,21 +941,22 @@
 
     // GPT Breakdown Modal
     function showGPTBreakdown() {
-      if (!metricsData || !metricsData.openAIUsage) return;
+      if (!metricsData || !metricsData.openAIUsage || !metricsData.openAIUsage.usage) return;
       
       const body = document.getElementById('gptBody');
-      const usage = metricsData.openAIUsage;
+      const usage = metricsData.openAIUsage.usage;
+      const accounts = metricsData.openAIUsage.accounts;
       
       let html = '<h3>OpenAI GPT Usage Details (Last 30 Days)</h3>';
       
       html += `
         <div class="breakdown-item">
           <div class="breakdown-label">Total Tokens</div>
-          <div class="breakdown-value">${usage.totalTokens.toLocaleString()}</div>
+          <div class="breakdown-value">${usage.totalTokens ? usage.totalTokens.toLocaleString() : '0'}</div>
         </div>
         <div class="breakdown-item">
           <div class="breakdown-label">Estimated Cost</div>
-          <div class="breakdown-value">$${usage.estimatedCost.toFixed(2)}</div>
+          <div class="breakdown-value">$${usage.estimatedCost ? usage.estimatedCost.toFixed(2) : '0.00'}</div>
         </div>
       `;
       
@@ -983,9 +984,9 @@
         html += '</div>';
       }
       
-      if (usage.accounts && usage.accounts.length > 0) {
+      if (accounts && accounts.length > 0) {
         html += '<h3 style="margin-top: 20px;">OpenAI Accounts</h3>';
-        usage.accounts.forEach(account => {
+        accounts.forEach(account => {
           html += `
             <div class="breakdown-item">
               <div>
@@ -1147,10 +1148,10 @@
       }
       
       // GPT usage
-      if (data.openAIUsage) {
-        document.getElementById('gpt_tokens').textContent = data.openAIUsage.totalTokens.toLocaleString();
-        document.getElementById('gpt_cost').textContent = `$${data.openAIUsage.estimatedCost.toFixed(2)}`;
-        document.getElementById('gpt_models').textContent = Object.keys(data.openAIUsage.modelUsage || {}).length;
+      if (data.openAIUsage && data.openAIUsage.usage) {
+        document.getElementById('gpt_tokens').textContent = data.openAIUsage.usage.totalTokens ? data.openAIUsage.usage.totalTokens.toLocaleString() : '0';
+        document.getElementById('gpt_cost').textContent = data.openAIUsage.usage.estimatedCost ? `$${data.openAIUsage.usage.estimatedCost.toFixed(2)}` : '$0';
+        document.getElementById('gpt_models').textContent = data.openAIUsage.usage.modelUsage ? Object.keys(data.openAIUsage.usage.modelUsage).length : 0;
       }
     }
 
@@ -1266,9 +1267,9 @@
       }
       
       // GPT daily usage trend chart
-      if (data.openAIUsage && data.openAIUsage.dailyUsage && data.openAIUsage.dailyUsage.length > 0) {
+      if (data.openAIUsage && data.openAIUsage.usage && data.openAIUsage.usage.dailyUsage && data.openAIUsage.usage.dailyUsage.length > 0) {
         const ctx = document.getElementById('tokenUsageChart').getContext('2d');
-        const dailyUsage = data.openAIUsage.dailyUsage;
+        const dailyUsage = data.openAIUsage.usage.dailyUsage;
         
         if (charts.tokenUsage) charts.tokenUsage.destroy();
         
@@ -1329,10 +1330,10 @@
       }
       
       // GPT model usage chart
-      if (data.openAIUsage && data.openAIUsage.modelUsage) {
+      if (data.openAIUsage && data.openAIUsage.usage && data.openAIUsage.usage.modelUsage) {
         const ctx = document.getElementById('tokenModelChart').getContext('2d');
-        const models = Object.keys(data.openAIUsage.modelUsage);
-        const tokens = models.map(m => data.openAIUsage.modelUsage[m].tokens);
+        const models = Object.keys(data.openAIUsage.usage.modelUsage);
+        const tokens = models.map(m => data.openAIUsage.usage.modelUsage[m].tokens);
         
         if (charts.tokenModel) charts.tokenModel.destroy();
         
