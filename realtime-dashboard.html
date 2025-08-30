@@ -624,31 +624,55 @@
     // Initialize MSAL
     async function initializeMSAL() {
       try {
-        // Handle redirect response
+        // Handle redirect response first
         const response = await msalInstance.handleRedirectPromise();
-        if (response) {
+        if (response && response.account) {
+          console.log('Login successful via redirect');
           currentAccount = response.account;
+          msalInstance.setActiveAccount(response.account);
           showMessage('Successfully signed in!', 'success');
           await onSignIn();
+          return; // Important: return here to avoid re-triggering login
         }
 
         // Check if user is already signed in
         const accounts = msalInstance.getAllAccounts();
         if (accounts.length > 0) {
+          console.log('User already signed in');
           currentAccount = accounts[0];
+          msalInstance.setActiveAccount(accounts[0]);
           await onSignIn();
+          return;
         }
+        
+        // Only show sign-in UI if not authenticated
+        console.log('No authenticated user found');
+        document.getElementById('authSection').classList.remove('hidden');
+        
       } catch (error) {
         console.error('MSAL initialization error:', error);
         showMessage('Authentication error: ' + error.message, 'error');
+        document.getElementById('authSection').classList.remove('hidden');
       }
     }
 
     // Sign In
     async function signIn() {
       try {
+        // Check if already signing in
+        if (msalInstance.getActiveAccount()) {
+          console.log('Already signed in');
+          currentAccount = msalInstance.getActiveAccount();
+          await onSignIn();
+          return;
+        }
+        
         showMessage('Redirecting to Microsoft login...', 'info');
-        await msalInstance.loginRedirect(loginRequest);
+        await msalInstance.loginRedirect({
+          ...loginRequest,
+          redirectUri: 'https://repository.saxtechnology.com/realtime-dashboard.html',
+          prompt: 'select_account' // Force account selection to avoid cached loops
+        });
       } catch (error) {
         console.error('Login error:', error);
         showMessage('Login failed: ' + error.message, 'error');
