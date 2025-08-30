@@ -251,18 +251,27 @@ class N8NIntegration {
     // Generate workflow visualization
     renderWorkflowDiagram(workflowData, containerId) {
         const container = document.getElementById(containerId);
-        if (!container) return;
+        if (!container) {
+            console.error('Container not found:', containerId);
+            return;
+        }
         
         // Clear existing content
         container.innerHTML = '';
         
+        // Check if we have nodes to render
+        if (!workflowData.nodes || workflowData.nodes.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--sax-text-dim);">No workflow nodes to display</div>';
+            return;
+        }
+        
         // Create SVG canvas
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.style.width = '100%';
-        svg.style.height = '400px';
-        svg.style.background = 'var(--sax-darker)';
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '400');
+        svg.style.backgroundColor = '#0f1729';
         svg.style.borderRadius = '12px';
-        svg.style.border = '1px solid var(--sax-border)';
+        svg.style.border = '1px solid rgba(0,212,255,0.15)';
         
         // Calculate node positions
         const nodes = workflowData.nodes || [];
@@ -312,7 +321,7 @@ class N8NIntegration {
                         
                         const d = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
                         path.setAttribute('d', d);
-                        path.setAttribute('stroke', 'var(--sax-primary)');
+                        path.setAttribute('stroke', '#00d4ff');
                         path.setAttribute('stroke-width', '2');
                         path.setAttribute('fill', 'none');
                         path.setAttribute('opacity', '0.6');
@@ -339,8 +348,8 @@ class N8NIntegration {
             rect.setAttribute('width', nodeWidth);
             rect.setAttribute('height', nodeHeight);
             rect.setAttribute('rx', '8');
-            rect.setAttribute('fill', 'var(--sax-card)');
-            rect.setAttribute('stroke', 'var(--sax-border)');
+            rect.setAttribute('fill', '#1a2332');
+            rect.setAttribute('stroke', 'rgba(0,212,255,0.3)');
             rect.setAttribute('stroke-width', '2');
             
             // Add gradient based on node type
@@ -372,7 +381,7 @@ class N8NIntegration {
             text.setAttribute('font-family', 'Inter, sans-serif');
             text.setAttribute('font-size', '13');
             text.setAttribute('font-weight', '600');
-            text.setAttribute('fill', 'var(--sax-text)');
+            text.setAttribute('fill', '#e2e8f0');
             
             // Truncate long names
             const displayName = node.name.length > 20 ? node.name.substring(0, 17) + '...' : node.name;
@@ -385,7 +394,7 @@ class N8NIntegration {
             typeText.setAttribute('y', '55');
             typeText.setAttribute('font-family', 'Inter, sans-serif');
             typeText.setAttribute('font-size', '11');
-            typeText.setAttribute('fill', 'var(--sax-text-dim)');
+            typeText.setAttribute('fill', '#94a3b8');
             typeText.textContent = node.type.split('.').pop();
             nodeGroup.appendChild(typeText);
             
@@ -394,9 +403,21 @@ class N8NIntegration {
         
         svg.appendChild(nodesGroup);
         
-        // Set viewBox to fit content
-        const bbox = svg.getBBox();
-        svg.setAttribute('viewBox', `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
+        // Set viewBox to fit content - with fallback for empty bbox
+        try {
+            const bbox = svg.getBBox();
+            if (bbox.width > 0 && bbox.height > 0) {
+                svg.setAttribute('viewBox', `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
+            } else {
+                // Fallback viewBox if getBBox fails
+                const maxX = Math.max(...Array.from(nodePositions.values()).map(p => p.x + nodeWidth));
+                const maxY = Math.max(...Array.from(nodePositions.values()).map(p => p.y + nodeHeight));
+                svg.setAttribute('viewBox', `0 0 ${maxX + 40} ${maxY + 40}`);
+            }
+        } catch (e) {
+            console.warn('Could not calculate SVG viewBox, using default');
+            svg.setAttribute('viewBox', '0 0 800 400');
+        }
         
         container.appendChild(svg);
     }
