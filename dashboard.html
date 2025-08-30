@@ -192,12 +192,17 @@
 
       <!-- Backup Status Card -->
       <div class="card span-4">
-        <div class="stat"><div class="label">Backup Status</div><div id="backup_status" class="value clickable" onclick="showBackupDetails()">Unknown</div></div>
+        <div class="stat"><div class="label">Backup Status</div><div id="backup_status" class="value clickable" onclick="showBackupDetails()">Checking...</div></div>
         <div class="kpi" style="margin-top:10px;">
           <div>Protected Items</div>
           <div id="backup_items" class="pill">0</div>
         </div>
         <div class="kpi">
+          <div>Last 24h Jobs</div>
+          <div id="backup_jobs" class="pill">0 success / 0 failed</div>
+        </div>
+        <div class="note" style="margin-top:8px; font-size:10px;">Last updated: <span id="backup_timestamp">--</span> EST</div>
+        <div class="kpi" style="margin-top:8px;">
           <div>Last 24h Jobs</div>
           <div id="backup_jobs" class="pill">0 success / 0 failed</div>
         </div>
