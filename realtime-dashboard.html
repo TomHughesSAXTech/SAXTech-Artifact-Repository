@@ -477,25 +477,25 @@
 
       <!-- Resource Counts -->
       <div class="dashboard-grid">
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownResourceType('resourceGroups')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Resource Groups</div>
           <div class="metric-value" id="rgCount">--</div>
           <div class="metric-subtitle">Active groups</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownResourceType('virtualMachines')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Virtual Machines</div>
           <div class="metric-value" id="vmCount">--</div>
           <div class="metric-subtitle" id="vmStatus">--</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownResourceType('storageAccounts')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Storage Accounts</div>
           <div class="metric-value" id="storageCount">--</div>
           <div class="metric-subtitle">Total accounts</div>
         </div>
         
-        <div class="metric-card">
+        <div class="metric-card" onclick="window.drillDownResourceType('webApps')" style="cursor: pointer;" title="Click for details">
           <div class="metric-label">Web Apps</div>
           <div class="metric-value" id="webAppCount">--</div>
           <div class="metric-subtitle">Static + Function</div>
@@ -1031,8 +1031,10 @@
           getResourceGroups()
         ]);
         
-        // Update resource counts immediately
+        // Update resource counts immediately and store for drill-down
         updateResourceCounts(resources, resourceGroups);
+        window.allResources = resources;
+        window.allResourceGroups = resourceGroups;
         
         // Then try to get cost data sequentially (to avoid rate limiting)
         let mtdData, weekData, yesterdayData, todayData;
@@ -1764,6 +1766,198 @@
       });
       
       html += '</tbody></table>';
+      modalBody.innerHTML = html;
+    }
+    
+    // Drill-down for resource type metric cards
+    window.drillDownResourceType = async function(resourceType) {
+      const modal = document.getElementById('detailModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      
+      let title, resources = [];
+      
+      switch(resourceType) {
+        case 'resourceGroups':
+          title = 'Resource Groups Details';
+          if (window.allResourceGroups?.value) {
+            resources = window.allResourceGroups.value.map(rg => ({
+              name: rg.name,
+              location: rg.location,
+              id: rg.id,
+              type: 'Resource Group',
+              tags: rg.tags
+            }));
+          }
+          break;
+          
+        case 'virtualMachines':
+          title = 'Virtual Machines Details';
+          if (window.allResources?.value) {
+            resources = window.allResources.value
+              .filter(r => r.type.toLowerCase() === 'microsoft.compute/virtualmachines')
+              .map(vm => ({
+                name: vm.name,
+                location: vm.location,
+                id: vm.id,
+                type: 'Virtual Machine',
+                resourceGroup: vm.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown',
+                tags: vm.tags
+              }));
+          }
+          break;
+          
+        case 'storageAccounts':
+          title = 'Storage Accounts Details';
+          if (window.allResources?.value) {
+            resources = window.allResources.value
+              .filter(r => r.type.toLowerCase() === 'microsoft.storage/storageaccounts')
+              .map(sa => ({
+                name: sa.name,
+                location: sa.location,
+                id: sa.id,
+                type: 'Storage Account',
+                resourceGroup: sa.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown',
+                kind: sa.kind,
+                tags: sa.tags
+              }));
+          }
+          break;
+          
+        case 'webApps':
+          title = 'Web Apps Details';
+          if (window.allResources?.value) {
+            const staticSites = window.allResources.value
+              .filter(r => r.type.toLowerCase() === 'microsoft.web/staticsites')
+              .map(app => ({
+                name: app.name,
+                location: app.location || 'Global',
+                id: app.id,
+                type: 'Static Web App',
+                resourceGroup: app.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown',
+                tags: app.tags
+              }));
+            
+            const functionApps = window.allResources.value
+              .filter(r => r.type.toLowerCase() === 'microsoft.web/sites')
+              .map(app => ({
+                name: app.name,
+                location: app.location,
+                id: app.id,
+                type: app.kind?.includes('functionapp') ? 'Function App' : 'Web App',
+                resourceGroup: app.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown',
+                tags: app.tags
+              }));
+            
+            resources = [...staticSites, ...functionApps];
+          }
+          break;
+      }
+      
+      modalTitle.textContent = title;
+      modalBody.innerHTML = '<div class="spinner"></div>';
+      modal.classList.add('active');
+      
+      if (resources.length === 0) {
+        modalBody.innerHTML = `
+          <div style="color: #94a3b8; text-align: center;">
+            <p>No resources found</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Build the detail view
+      let html = `
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Total Count</div>
+            <div class="detail-value">${resources.length}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Locations</div>
+            <div class="detail-value">${[...new Set(resources.map(r => r.location))].length}</div>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 20px; color: #00d4ff;">Resources List</h3>
+        <div style="max-height: 400px; overflow-y: auto; margin-top: 10px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                ${resourceType !== 'resourceGroups' ? '<th>Resource Group</th>' : ''}
+                <th>Location</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      // Sort resources by name
+      resources.sort((a, b) => a.name.localeCompare(b.name));
+      
+      resources.forEach(resource => {
+        const tagCount = resource.tags ? Object.keys(resource.tags).length : 0;
+        const escapedId = resource.id.replace(/'/g, "\\'");
+        const escapedName = resource.name.replace(/'/g, "\\'");
+        
+        html += `
+          <tr style="cursor: pointer;" onclick="window.drillDownResource('${escapedId}', '${escapedName}', 0)" title="Click for more details">
+            <td style="color: #00d4ff; text-decoration: underline;">${resource.name}</td>
+            <td>${resource.type}</td>
+            ${resourceType !== 'resourceGroups' ? `<td>${resource.resourceGroup || '--'}</td>` : ''}
+            <td>${resource.location}</td>
+            <td>${tagCount > 0 ? `${tagCount} tags` : '--'}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      // Add location breakdown
+      const locationCounts = {};
+      resources.forEach(r => {
+        locationCounts[r.location] = (locationCounts[r.location] || 0) + 1;
+      });
+      
+      const sortedLocations = Object.entries(locationCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+      
+      if (sortedLocations.length > 0) {
+        html += `
+          <h3 style="margin-top: 20px; color: #00d4ff;">Distribution by Location</h3>
+          <table class="data-table" style="margin-top: 10px;">
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Count</th>
+                <th>Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        sortedLocations.forEach(([location, count]) => {
+          const percentage = ((count / resources.length) * 100).toFixed(1);
+          html += `
+            <tr>
+              <td>${location}</td>
+              <td>${count}</td>
+              <td>${percentage}%</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+      }
+      
       modalBody.innerHTML = html;
     }
     
