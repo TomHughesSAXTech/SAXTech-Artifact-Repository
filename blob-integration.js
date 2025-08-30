@@ -293,8 +293,10 @@ class AzureBlobManager {
 
     // Create new project
     createProject(projectData) {
+        // Generate a unique ID using timestamp and random string
+        const uniqueId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const newProject = {
-            id: this.projects.length + 1,
+            id: uniqueId,
             ...projectData,
             artifacts: [],
             created: new Date(),

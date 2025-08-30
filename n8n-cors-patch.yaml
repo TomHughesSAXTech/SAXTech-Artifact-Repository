@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  template:
+    spec:
+      containers:
+      - name: n8n
+        env:
+        - name: N8N_PUSH_BACKEND
+          value: "websocket"
+        - name: WEBHOOK_URL
+          value: "https://workflows.saxtechnology.com/"
+        - name: N8N_PROTOCOL
+          value: "https"
+        - name: N8N_HOST
+          value: "workflows.saxtechnology.com"
+        - name: N8N_ENDPOINT_REST
+          value: "https://workflows.saxtechnology.com/api/v1"
+        # Add CORS configuration
+        - name: N8N_ACCESS_CONTROL_ALLOW_ORIGIN
+          value: "https://repository.saxtechnology.com,https://saxtech-roicalc.azurestaticapps.net,https://localhost:*,http://localhost:*"
+        - name: N8N_ACCESS_CONTROL_ALLOW_CREDENTIALS
+          value: "true"
+        - name: N8N_ACCESS_CONTROL_ALLOW_METHODS
+          value: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+        - name: N8N_ACCESS_CONTROL_ALLOW_HEADERS
+          value: "Content-Type,Authorization,X-Requested-With,Accept,Origin"

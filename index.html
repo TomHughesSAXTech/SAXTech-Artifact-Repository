@@ -1592,8 +1592,8 @@
                         ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
                         ${project.n8nWorkflows && project.n8nWorkflows.main ? `<a href="#" class="link-btn" onclick="window.n8nIntegration.showWorkflowPreview('${project.n8nWorkflows.main}'); return false;"><span>⚙️</span> Workflow</a>` : ''}
-                        <a href="#" class="link-btn" onclick="editProject(${project.id}); return false;"><span>✏️</span> Edit</a>
-                        <a href="#" class="link-btn" onclick="deleteProject(${project.id}); return false;" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><span>🗑️</span> Delete</a>
+                        <a href="#" class="link-btn" onclick="editProject('${project.id}'); return false;"><span>✏️</span> Edit</a>
+                        <a href="#" class="link-btn" onclick="deleteProject('${project.id}'); return false;" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><span>🗑️</span> Delete</a>
                     </div>
                     <div class="project-artifacts">
                         <div class="artifacts-header">Project Artifacts (${project.artifacts.length})</div>
@@ -1712,8 +1712,10 @@
         }
 
         function editProject(projectId) {
-            const project = projects.find(p => p.id === projectId);
+            // Convert to string for consistent comparison
+            const project = projects.find(p => String(p.id) === String(projectId));
             if (!project) {
+                console.error('Project not found with ID:', projectId, 'Available IDs:', projects.map(p => p.id));
                 showToast('Project not found', 'error');
                 return;
             }
@@ -1738,8 +1740,10 @@
                 return;
             }
             
-            const projectIndex = projects.findIndex(p => p.id === projectId);
+            // Convert to string for consistent comparison
+            const projectIndex = projects.findIndex(p => String(p.id) === String(projectId));
             if (projectIndex === -1) {
+                console.error('Project not found with ID:', projectId, 'Available IDs:', projects.map(p => p.id));
                 showToast('Project not found', 'error');
                 return;
             }
@@ -1864,8 +1868,8 @@
         document.getElementById('editProjectForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const projectId = parseInt(document.getElementById('editProjectId').value);
-            const projectIndex = projects.findIndex(p => p.id === projectId);
+            const projectId = document.getElementById('editProjectId').value;
+            const projectIndex = projects.findIndex(p => String(p.id) === String(projectId));
             
             if (projectIndex === -1) {
                 showToast('Project not found', 'error');

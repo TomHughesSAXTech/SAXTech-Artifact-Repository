@@ -12,6 +12,7 @@ const { RecoveryServicesClient } = require('@azure/arm-recoveryservices');
 const { WebSiteManagementClient } = require('@azure/arm-appservice');
 const { TableClient } = require('@azure/data-tables');
 const { BlobServiceClient: StorageBlobClient } = require('@azure/storage-blob');
+const axios = require('axios');
 
 // Configuration
 const subscriptionId = '3cfb259a-f02a-484e-9ce3-d83c21fd0ddb';
@@ -642,12 +643,32 @@ async function fetchKubernetesMetrics() {
     }
 }
 
-// FIXED: Backup status with actual data
+// FIXED: Backup status including Kubernetes backup detection
 async function fetchBackupStatus() {
     try {
         const graphClient = new ResourceGraphClient(credential);
+        const storageClient = new StorageManagementClient(credential, subscriptionId);
         
-        // Query for backup vaults
+        // Check for n8n Kubernetes backup storage
+        let kubernetesBackup = null;
+        try {
+            // Check if the n8n backup storage account exists
+            const backupStorage = await storageClient.storageAccounts.getProperties('saxtech-ai', 'saxtechn8nbackups');
+            if (backupStorage) {
+                kubernetesBackup = {
+                    type: 'Kubernetes CronJob',
+                    storageAccount: 'saxtechn8nbackups',
+                    container: 'n8n-backups',
+                    schedule: 'Every 6 hours',
+                    components: ['PostgreSQL Database', 'n8n Files'],
+                    status: 'Active'
+                };
+            }
+        } catch (e) {
+            // Storage account doesn't exist or not accessible
+        }
+        
+        // Query for traditional backup vaults
         const vaultQuery = {
             subscriptions: [subscriptionId],
             query: `
@@ -695,12 +716,13 @@ async function fetchBackupStatus() {
         
         return {
             vaults: vaults,
+            kubernetesBackup: kubernetesBackup,
             summary: {
                 totalVaults: totalVaults,
                 totalProtectedItems: totalProtectedItems,
                 failedJobs: 0,
                 successfulJobs: 0,
-                status: totalVaults > 0 ? 'Configured' : 'Not Configured'
+                status: kubernetesBackup ? 'Kubernetes Backup Active' : (totalVaults > 0 ? 'Configured' : 'Not Configured')
             }
         };
     } catch (error) {
@@ -753,31 +775,58 @@ async function fetchGPTUsage(bypassCache = false) {
                 
                 // Get deployments
                 try {
-                    const deployments = cognitiveClient.accounts.listDeployments(
+                    const deployments = cognitiveClient.deployments.list(
                         accountResourceGroup,
                         account.name
                     );
                     
                     for await (const deployment of deployments) {
+                        const modelName = deployment.properties?.model?.name || deployment.model?.name || deployment.name || 'Unknown';
+                        const modelVersion = deployment.properties?.model?.version || deployment.model?.version || 'latest';
+                        
                         accountDetails.deployments.push({
                             name: deployment.name,
-                            model: deployment.properties?.model?.name || 'Unknown',
-                            version: deployment.properties?.model?.version,
-                            capacity: deployment.sku?.capacity
+                            model: modelName,
+                            version: modelVersion,
+                            capacity: deployment.sku?.capacity || deployment.properties?.scaleSettings?.capacity
                         });
                         
                         // Initialize model tracking
-                        const modelName = deployment.properties?.model?.name || 'Unknown';
                         if (!modelUsage[modelName]) {
                             modelUsage[modelName] = {
                                 tokens: 0,
                                 requests: 0,
-                                cost: 0
+                                cost: 0,
+                                deploymentName: deployment.name
                             };
                         }
                     }
                 } catch (error) {
                     console.log(`Could not get deployments for ${account.name}:`, error.message);
+                    // Try alternate approach for deployments
+                    try {
+                        // Some accounts may have deployment info in properties
+                        if (account.properties?.deployments) {
+                            for (const dep of account.properties.deployments) {
+                                const modelName = dep.model || dep.name || 'Unknown';
+                                accountDetails.deployments.push({
+                                    name: dep.name,
+                                    model: modelName,
+                                    version: dep.version || 'latest'
+                                });
+                                if (!modelUsage[modelName]) {
+                                    modelUsage[modelName] = {
+                                        tokens: 0,
+                                        requests: 0,
+                                        cost: 0,
+                                        deploymentName: dep.name
+                                    };
+                                }
+                            }
+                        }
+                    } catch (altError) {
+                        // No deployments found via alternate method either
+                    }
                 }
                 
                 // Get usage metrics
@@ -862,8 +911,16 @@ async function fetchGPTUsage(bypassCache = false) {
             totalCost += modelUsage[model].cost;
         });
         
-        // NO FAKE MODEL DATA - just return what we have
-        console.log(`GPT Usage: ${totalTokens} tokens, ${Object.keys(modelUsage).length} models detected`);
+        // Convert model usage to array format for frontend
+        const models = Object.keys(modelUsage).map(modelName => ({
+            name: modelName,
+            tokens: modelUsage[modelName].tokens,
+            requests: modelUsage[modelName].requests || 0,
+            cost: modelUsage[modelName].cost,
+            deploymentName: modelUsage[modelName].deploymentName
+        }));
+        
+        console.log(`GPT Usage: ${totalTokens} tokens, ${models.length} models detected`);
         
         // If we have daily usage but it's an object, convert to array
         const dailyUsageArray = [];
@@ -875,7 +932,8 @@ async function fetchGPTUsage(bypassCache = false) {
         
         const gptUsage = {
             accounts: openAIAccounts,
-            modelUsage: modelUsage,
+            models: models, // Add models array that frontend expects
+            modelUsage: modelUsage, // Keep for backward compatibility
             dailyUsage: dailyUsageArray.length > 0 ? dailyUsageArray : Object.entries(dailyUsage).map(([date, tokens]) => ({ date, tokens })),
             totalTokens: totalTokens,
             estimatedCost: totalCost,
@@ -890,25 +948,92 @@ async function fetchGPTUsage(bypassCache = false) {
     }
 }
 
-// FIXED: Resources in resource group
+// FIXED: Resources in resource group using Resource Management API
 async function fetchResourcesInResourceGroup(resourceGroupName) {
     try {
-        const graphClient = new ResourceGraphClient(credential);
-        
-        const query = {
-            subscriptions: [subscriptionId],
-            query: `
-                Resources
-                | where subscriptionId =~ '${subscriptionId}'
-                | where resourceGroup =~ '${resourceGroupName}'
-                | project name, type, location, id, kind, properties, tags
-                | order by type asc, name asc
-                | limit 1000
-            `
-        };
-        
-        const result = await graphClient.resources(query);
+        const resourceClient = new ResourceManagementClient(credential, subscriptionId);
         const resources = [];
+        
+        // Use Resource Management API to list resources in resource group
+        console.log(`Fetching resources for resource group: ${resourceGroupName}`);
+        
+        for await (const resource of resourceClient.resources.listByResourceGroup(resourceGroupName)) {
+            console.log(`Found resource: ${resource.name} of type ${resource.type}`);
+            
+            let url = null;
+            const type = resource.type?.toLowerCase() || '';
+            
+            if (type === 'microsoft.web/sites') {
+                url = `https://${resource.name}.azurewebsites.net`;
+            } else if (type === 'microsoft.web/staticsites') {
+                url = `https://${resource.name}.azurestaticapps.net`;
+            } else if (type === 'microsoft.storage/storageaccounts') {
+                url = `https://${resource.name}.blob.core.windows.net`;
+            }
+            
+            // Estimate monthly costs based on resource type and SKU
+            let estimatedMonthlyCost = 0;
+            if (type === 'microsoft.web/sites') {
+                // App Service pricing
+                const sku = resource.sku?.name || 'F1';
+                if (sku.startsWith('B')) estimatedMonthlyCost = 13.14; // Basic
+                else if (sku.startsWith('S')) estimatedMonthlyCost = 73.00; // Standard
+                else if (sku.startsWith('P')) estimatedMonthlyCost = 146.00; // Premium
+            } else if (type === 'microsoft.web/staticsites') {
+                const sku = resource.sku?.name || 'Free';
+                if (sku === 'Standard') estimatedMonthlyCost = 9.00;
+            } else if (type === 'microsoft.storage/storageaccounts') {
+                estimatedMonthlyCost = 0.02; // Per GB, base cost
+            } else if (type === 'microsoft.search/searchservices') {
+                const sku = resource.sku?.name || 'free';
+                if (sku.toLowerCase() === 'basic') estimatedMonthlyCost = 75.00;
+                else if (sku.toLowerCase() === 'standard') estimatedMonthlyCost = 250.00;
+            } else if (type === 'microsoft.cognitiveservices/accounts') {
+                estimatedMonthlyCost = 0; // Pay per use
+            } else if (type === 'microsoft.dbforpostgresql/servers' || type.includes('postgresql')) {
+                estimatedMonthlyCost = 25.00; // Basic tier estimate
+            } else if (type === 'microsoft.compute/virtualmachines') {
+                estimatedMonthlyCost = 50.00; // B1s estimate
+            }
+            
+            resources.push({
+                name: resource.name,
+                type: resource.type,
+                shortType: resource.type.split('/').pop(),
+                location: resource.location,
+                id: resource.id,
+                kind: resource.kind,
+                sku: resource.sku?.name,
+                url: url,
+                estimatedMonthlyCost: estimatedMonthlyCost,
+                tags: resource.tags || {}
+            });
+        }
+        
+        console.log(`Total resources found in ${resourceGroupName}: ${resources.length}`);
+        return resources;
+    } catch (error) {
+        console.error(`Error fetching resources for resource group ${resourceGroupName}:`, error);
+        
+        // Fallback to Resource Graph API
+        try {
+            console.log('Attempting fallback to Resource Graph API...');
+            const graphClient = new ResourceGraphClient(credential);
+            
+            const query = {
+                subscriptions: [subscriptionId],
+                query: `
+                    Resources
+                    | where subscriptionId =~ '${subscriptionId}'
+                    | where resourceGroup =~ '${resourceGroupName}'
+                    | project name, type, location, id, kind, sku, properties, tags
+                    | order by type asc, name asc
+                    | limit 1000
+                `
+            };
+            
+            const result = await graphClient.resources(query);
+            const resources = [];
         
         if (result.data && result.data.length > 0) {
             result.data.forEach(resource => {
@@ -966,10 +1091,11 @@ async function fetchResourcesInResourceGroup(resourceGroupName) {
             });
         }
         
-        return resources;
-    } catch (error) {
-        console.error(`Error fetching resources for resource group ${resourceGroupName}:`, error);
-        return [];
+            return resources;
+        } catch (fallbackError) {
+            console.error(`Fallback also failed for resource group ${resourceGroupName}:`, fallbackError);
+            return [];
+        }
     }
 }
 
@@ -1246,6 +1372,124 @@ app.http('resources', {
                     error: 'Failed to fetch resources',
                     message: error.message,
                     timestamp: new Date().toISOString()
+                })
+            };
+        }
+    }
+});
+
+// N8N Proxy endpoint to handle CORS
+app.http('n8nProxy', {
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    authLevel: 'anonymous',
+    handler: async (request, context) => {
+        context.log('N8N Proxy function triggered');
+        
+        // Handle CORS preflight
+        if (request.method === 'OPTIONS') {
+            return {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-N8N-API-Key'
+                }
+            };
+        }
+        
+        try {
+            // N8N configuration - direct IP access since domain has issues
+            const N8N_BASE_URL = 'http://4.152.195.113:5678/api/v1';
+            
+            // Extract the path after /api/n8nProxy/
+            const url = new URL(request.url);
+            const pathMatch = url.pathname.match(/\/api\/n8nProxy\/(.*)/);
+            const n8nPath = pathMatch ? pathMatch[1] : '';
+            
+            // Build the full n8n URL
+            const n8nUrl = `${N8N_BASE_URL}/${n8nPath}${url.search}`;
+            
+            context.log(`Proxying to n8n: ${request.method} ${n8nUrl}`);
+            
+            // Prepare headers
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Forward API key header if present
+            const apiKeyHeader = request.headers.get('x-n8n-api-key');
+            if (apiKeyHeader) {
+                headers['X-N8N-API-KEY'] = apiKeyHeader;
+            }
+            
+            // Forward authorization header if present
+            const authHeader = request.headers.get('authorization');
+            if (authHeader) {
+                headers['Authorization'] = authHeader;
+            }
+            
+            // Make the request to n8n
+            const config = {
+                method: request.method.toLowerCase(),
+                url: n8nUrl,
+                headers: headers,
+                timeout: 30000 // 30 second timeout
+            };
+            
+            // Add body for POST/PUT requests
+            if (request.method === 'POST' || request.method === 'PUT') {
+                const body = await request.text();
+                if (body) {
+                    try {
+                        config.data = JSON.parse(body);
+                    } catch {
+                        config.data = body;
+                    }
+                }
+            }
+            
+            const response = await axios(config);
+            
+            return {
+                status: response.status,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-N8N-API-Key'
+                },
+                body: JSON.stringify(response.data)
+            };
+            
+        } catch (error) {
+            context.log.error('Error proxying to n8n:', error);
+            
+            // If it's an axios error with a response, forward the error
+            if (error.response) {
+                return {
+                    status: error.response.status,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    body: JSON.stringify({
+                        error: error.response.data || error.message,
+                        status: error.response.status
+                    })
+                };
+            }
+            
+            // Otherwise return a generic error
+            return {
+                status: 500,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({
+                    error: 'Failed to proxy request to n8n',
+                    message: error.message,
+                    details: 'The n8n service may be unreachable or the workflow ID may be invalid'
                 })
             };
         }
