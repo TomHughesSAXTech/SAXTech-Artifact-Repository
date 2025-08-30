@@ -623,35 +623,46 @@
 
     // Initialize MSAL
     async function initializeMSAL() {
-      try {
-        // Handle redirect response first
-        const response = await msalInstance.handleRedirectPromise();
-        if (response && response.account) {
-          console.log('Login successful via redirect');
-          currentAccount = response.account;
-          msalInstance.setActiveAccount(response.account);
-          showMessage('Successfully signed in!', 'success');
-          await onSignIn();
-          return; // Important: return here to avoid re-triggering login
+      console.log('Initializing MSAL...');
+      
+      // Check if we're in the middle of a redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasCode = urlParams.has('code');
+      const hasError = urlParams.has('error');
+      
+      if (hasCode || hasError) {
+        console.log('Handling redirect response...');
+        try {
+          const response = await msalInstance.handleRedirectPromise();
+          if (response && response.account) {
+            console.log('Login successful!');
+            currentAccount = response.account;
+            msalInstance.setActiveAccount(response.account);
+            
+            // Clear the URL parameters to prevent loops
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            showMessage('Successfully signed in!', 'success');
+            await onSignIn();
+            return;
+          }
+        } catch (error) {
+          console.error('Error handling redirect:', error);
+          // Clear the URL parameters to prevent loops
+          window.history.replaceState({}, document.title, window.location.pathname);
+          showMessage('Authentication failed: ' + error.message, 'error');
         }
-
-        // Check if user is already signed in
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) {
-          console.log('User already signed in');
-          currentAccount = accounts[0];
-          msalInstance.setActiveAccount(accounts[0]);
-          await onSignIn();
-          return;
-        }
-        
-        // Only show sign-in UI if not authenticated
-        console.log('No authenticated user found');
-        document.getElementById('authSection').classList.remove('hidden');
-        
-      } catch (error) {
-        console.error('MSAL initialization error:', error);
-        showMessage('Authentication error: ' + error.message, 'error');
+      }
+      
+      // Check for existing accounts
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts && accounts.length > 0) {
+        console.log('Found existing account');
+        currentAccount = accounts[0];
+        msalInstance.setActiveAccount(accounts[0]);
+        await onSignIn();
+      } else {
+        console.log('No authenticated user, showing login UI');
         document.getElementById('authSection').classList.remove('hidden');
       }
     }
@@ -659,23 +670,63 @@
     // Sign In
     async function signIn() {
       try {
-        // Check if already signing in
-        if (msalInstance.getActiveAccount()) {
-          console.log('Already signed in');
-          currentAccount = msalInstance.getActiveAccount();
+        console.log('Starting sign in process...');
+        
+        // Double check we're not already authenticated
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts && accounts.length > 0) {
+          console.log('Already have an account, using it');
+          currentAccount = accounts[0];
+          msalInstance.setActiveAccount(accounts[0]);
           await onSignIn();
           return;
         }
         
         showMessage('Redirecting to Microsoft login...', 'info');
-        await msalInstance.loginRedirect({
-          ...loginRequest,
-          redirectUri: 'https://repository.saxtechnology.com/realtime-dashboard.html',
-          prompt: 'select_account' // Force account selection to avoid cached loops
-        });
+        
+        // Use loginPopup as fallback if redirect keeps looping
+        const usePopup = localStorage.getItem('usePopupAuth') === 'true';
+        
+        if (usePopup) {
+          console.log('Using popup authentication');
+          const response = await msalInstance.loginPopup(loginRequest);
+          if (response && response.account) {
+            currentAccount = response.account;
+            msalInstance.setActiveAccount(response.account);
+            await onSignIn();
+          }
+        } else {
+          console.log('Using redirect authentication');
+          // Set a flag to detect loops
+          const lastRedirect = localStorage.getItem('lastAuthRedirect');
+          const now = Date.now();
+          
+          if (lastRedirect && (now - parseInt(lastRedirect)) < 5000) {
+            console.warn('Detected potential redirect loop, switching to popup');
+            localStorage.setItem('usePopupAuth', 'true');
+            const response = await msalInstance.loginPopup(loginRequest);
+            if (response && response.account) {
+              currentAccount = response.account;
+              msalInstance.setActiveAccount(response.account);
+              await onSignIn();
+            }
+          } else {
+            localStorage.setItem('lastAuthRedirect', now.toString());
+            await msalInstance.loginRedirect({
+              ...loginRequest,
+              redirectUri: 'https://repository.saxtechnology.com/realtime-dashboard.html'
+            });
+          }
+        }
       } catch (error) {
         console.error('Login error:', error);
         showMessage('Login failed: ' + error.message, 'error');
+        
+        // If redirect fails, offer popup as alternative
+        if (error.message.includes('redirect')) {
+          localStorage.setItem('usePopupAuth', 'true');
+          showMessage('Redirect failed. Click Sign In to try popup authentication.', 'info');
+        }
       }
     }
 
