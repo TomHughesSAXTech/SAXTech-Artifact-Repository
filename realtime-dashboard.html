@@ -1995,22 +1995,29 @@ spec:
       }
 
       // Yesterday's Cost
-      if (yesterdayData?.properties?.rows) {
+      if (yesterdayData?.properties?.rows && yesterdayData.properties.rows.length > 0) {
         const total = yesterdayData.properties.rows.reduce((sum, row) => sum + (row[0] || 0), 0);
-        document.getElementById('yesterdayCost').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('yesterdayCost').textContent = total > 0 ? `$${total.toFixed(2)}` : '$0.00';
+        document.getElementById('yesterdayDate').textContent = new Date(getYesterdayDate()).toLocaleDateString();
+      } else {
+        document.getElementById('yesterdayCost').textContent = '$0.00';
         document.getElementById('yesterdayDate').textContent = new Date(getYesterdayDate()).toLocaleDateString();
       }
 
       // Today's Cost
-      if (todayData?.properties?.rows) {
+      if (todayData?.properties?.rows && todayData.properties.rows.length > 0) {
         const total = todayData.properties.rows.reduce((sum, row) => sum + (row[0] || 0), 0);
-        document.getElementById('todayCost').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('todayCost').textContent = total > 0 ? `$${total.toFixed(2)}` : '$0.00';
+      } else {
+        document.getElementById('todayCost').textContent = '$0.00';
       }
 
       // Weekly Cost
-      if (weekData?.properties?.rows) {
+      if (weekData?.properties?.rows && weekData.properties.rows.length > 0) {
         const total = weekData.properties.rows.reduce((sum, row) => sum + (row[1] || 0), 0);
-        document.getElementById('weekCost').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('weekCost').textContent = total > 0 ? `$${total.toFixed(2)}` : '$0.00';
+      } else {
+        document.getElementById('weekCost').textContent = '$0.00';
       }
     }
 
@@ -2046,7 +2053,13 @@ spec:
     // Helper function to map service names consistently
     function mapServiceName(service) {
       // Ensure service is a string
-      service = String(service || 'Unknown');
+      service = String(service || '');
+      
+      // Handle empty, null, or undefined
+      if (!service || service === 'null' || service === 'undefined' || service === '') {
+        return 'Azure Services';
+      }
+      
       const serviceLower = service.toLowerCase();
       
       // Check direct mapping first
@@ -2060,16 +2073,40 @@ spec:
       // Don't try to map decimal numbers - they're actual costs, not service codes
       if (/^\d+\.?\d*$/.test(service)) {
         // This is likely a cost value that got misplaced, not a service name
-        return 'Unknown Service';
+        return 'Azure Services';
+      }
+      
+      // Handle 'unknown' variations
+      if (serviceLower === 'unknown' || serviceLower === 'unknown service') {
+        return 'Azure Services';
       }
       
       // Handle Microsoft.* resource provider format
       if (service.startsWith('microsoft.') || service.startsWith('Microsoft.')) {
-        const cleanedService = service.toLowerCase().replace('microsoft.', '');
-        if (serviceNameMap['microsoft.' + cleanedService]) {
-          return serviceNameMap['microsoft.' + cleanedService];
+        const parts = service.split('.');
+        if (parts.length >= 2) {
+          const provider = parts[1];
+          // Map common providers to friendly names
+          const providerMap = {
+            'compute': 'Virtual Machines',
+            'storage': 'Storage',
+            'web': 'App Services',
+            'network': 'Networking',
+            'keyvault': 'Key Vault',
+            'insights': 'Monitor & Insights',
+            'sql': 'SQL Database',
+            'documentdb': 'Cosmos DB',
+            'cognitiveservices': 'Cognitive Services',
+            'containerservice': 'Container Services',
+            'cdn': 'CDN',
+            'apimanagement': 'API Management'
+          };
+          if (providerMap[provider.toLowerCase()]) {
+            return providerMap[provider.toLowerCase()];
+          }
         }
         // Clean up the name
+        const cleanedService = service.toLowerCase().replace('microsoft.', '');
         return cleanedService
           .replace(/[_-]/g, ' ')
           .split(' ')
@@ -2085,19 +2122,41 @@ spec:
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ');
       
-      // If still looks weird (all caps, very short, etc), prefix it
+      // If still looks weird (all caps, very short, etc), make it more friendly
       if (cleaned.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
-        return `Azure ${cleaned}`;
+        return 'Azure Services';
       }
       
-      return cleaned;
+      return cleaned || 'Azure Services';
     }
     
-    // Service name mapping - only real Azure service names
+    // Service name mapping - comprehensive Azure service names
     const serviceNameMap = {
       // Common Azure service names (as returned by Cost Management API)
       'bandwidth': 'Bandwidth',
       'compute': 'Virtual Machines',
+      'virtual machines': 'Virtual Machines',
+      'storage': 'Storage',
+      'app service': 'App Services',
+      'app services': 'App Services',
+      'functions': 'Functions',
+      'logic apps': 'Logic Apps',
+      'azure active directory': 'Azure AD',
+      'key vault': 'Key Vault',
+      'monitor': 'Monitor & Insights',
+      'application insights': 'Application Insights',
+      'log analytics': 'Log Analytics',
+      'sql database': 'SQL Database',
+      'cosmos db': 'Cosmos DB',
+      'cognitive services': 'Cognitive Services',
+      'container instances': 'Container Instances',
+      'kubernetes service': 'Kubernetes Service',
+      'cdn': 'CDN',
+      'api management': 'API Management',
+      'event grid': 'Event Grid',
+      'event hubs': 'Event Hubs',
+      'service bus': 'Service Bus',
+      'notification hubs': 'Notification Hubs',
       'storage': 'Storage',
       'network': 'Networking',
       'web': 'Web Apps',
@@ -2570,7 +2629,7 @@ spec:
             <td>${resource.resourceGroup}</td>
             <td>${resource.location}</td>
             <td style="color: ${status.color};" title="${status.text}">${status.icon} ${status.text}</td>
-            <td>${resource.cost > 0 ? `$${resource.cost.toFixed(2)}` : '--'}</td>
+            <td>${resource.cost > 0 ? `$${resource.cost.toFixed(2)}` : '$0.00'}</td>
           </tr>
         `);
       }

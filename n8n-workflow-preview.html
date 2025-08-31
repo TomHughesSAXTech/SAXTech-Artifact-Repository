@@ -410,6 +410,7 @@
       box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
     }
   </style>
+  <script src="n8n-integration.js"></script>
 </head>
 <body>
   <div class="container">
@@ -492,8 +493,8 @@
   </div>
   
   <script>
-    // Sample workflows data
-    const workflows = [
+    // Real workflows will be fetched from SAXTech Automation Engine
+    let workflows = [
       {
         id: 'workflow1',
         name: 'Azure Cost Monitor',
@@ -571,7 +572,8 @@
           { from: 'wait1', to: 'followup1', active: true }
         ]
       }
-    ];
+      ];
+    }
     
     let currentWorkflow = null;
     let currentZoom = 1;
@@ -580,13 +582,173 @@
     let canvasOffset = { x: 0, y: 0 };
     let selectedNode = null;
     
-    // Initialize
-    window.onload = function() {
+    // Initialize and fetch real workflows
+    window.onload = async function() {
+      await fetchRealWorkflows();
       renderWorkflowList();
-      selectWorkflow(workflows[0]);
+      if (workflows.length > 0) {
+        selectWorkflow(workflows[0]);
+      }
       setupCanvasInteractions();
       updateMinimap();
     };
+    
+    // Fetch real workflows from SAXTech Automation Engine
+    async function fetchRealWorkflows() {
+      try {
+        // Try to get workflows from localStorage first (synced by n8n-integration.js)
+        const storedProjects = localStorage.getItem('saxtech_projects');
+        if (storedProjects) {
+          const projects = JSON.parse(storedProjects);
+          const realWorkflows = [];
+          
+          // Extract workflows from projects
+          projects.forEach(project => {
+            if (project.n8nWorkflows && project.n8nWorkflows.main) {
+              // Parse workflow URL to get ID
+              const urlMatch = project.n8nWorkflows.main.match(/workflow\/(\w+)/);
+              if (urlMatch) {
+                const workflowId = urlMatch[1];
+                
+                // Create workflow object
+                realWorkflows.push({
+                  id: workflowId,
+                  name: project.name,
+                  description: project.description || `${project.type} for ${project.client}`,
+                  nodes: 0, // Will be updated when fetched
+                  executions: 0,
+                  lastRun: 'Unknown',
+                  projectId: project.id,
+                  url: project.n8nWorkflows.main,
+                  nodes_data: [],
+                  connections: []
+                });
+              }
+            }
+            
+            // Also check for additional workflows
+            if (project.n8nWorkflows && project.n8nWorkflows.additional) {
+              project.n8nWorkflows.additional.forEach(url => {
+                const urlMatch = url.match(/workflow\/(\w+)/);
+                if (urlMatch) {
+                  const workflowId = urlMatch[1];
+                  realWorkflows.push({
+                    id: workflowId,
+                    name: `${project.name} - Additional`,
+                    description: project.description || `${project.type} for ${project.client}`,
+                    nodes: 0,
+                    executions: 0,
+                    lastRun: 'Unknown',
+                    projectId: project.id,
+                    url: url,
+                    nodes_data: [],
+                    connections: []
+                  });
+                }
+              });
+            }
+          });
+          
+          if (realWorkflows.length > 0) {
+            workflows = realWorkflows;
+            console.log(`Loaded ${workflows.length} real workflows from projects`);
+            
+            // Try to fetch detailed workflow data if n8n integration is available
+            if (window.n8nIntegration) {
+              for (let workflow of workflows) {
+                try {
+                  const workflowData = await window.n8nIntegration.fetchWorkflow(workflow.id);
+                  if (workflowData) {
+                    // Update workflow with real data
+                    workflow.nodes_data = parseWorkflowNodes(workflowData);
+                    workflow.connections = parseWorkflowConnections(workflowData);
+                    workflow.nodes = workflowData.nodes ? workflowData.nodes.length : 0;
+                    workflow.active = workflowData.active;
+                  }
+                } catch (error) {
+                  console.log(`Could not fetch details for workflow ${workflow.id}`);
+                }
+              }
+            }
+            
+            return;
+          }
+        }
+        
+        // If no real workflows found, show a message
+        console.log('No real workflows found. Using demo workflows.');
+        workflows = getDemoWorkflows();
+        
+      } catch (error) {
+        console.error('Error fetching workflows:', error);
+        workflows = getDemoWorkflows();
+      }
+    }
+    
+    // Parse workflow nodes from n8n data
+    function parseWorkflowNodes(workflowData) {
+      if (!workflowData.nodes) return [];
+      
+      return workflowData.nodes.map((node, index) => {
+        // Determine node type
+        let type = 'action';
+        if (node.type.toLowerCase().includes('trigger') || node.type.toLowerCase().includes('webhook')) {
+          type = 'trigger';
+        } else if (node.type.toLowerCase().includes('if') || node.type.toLowerCase().includes('switch') || node.type.toLowerCase().includes('merge')) {
+          type = 'logic';
+        } else if (node.type.toLowerCase().includes('http') || node.type.toLowerCase().includes('database') || node.type.toLowerCase().includes('api')) {
+          type = 'data';
+        }
+        
+        // Get icon based on node type
+        let icon = '⚙️';
+        if (node.type.includes('webhook')) icon = '🔗';
+        else if (node.type.includes('http')) icon = '🌐';
+        else if (node.type.includes('trigger')) icon = '⚡';
+        else if (node.type.includes('if')) icon = '❓';
+        else if (node.type.includes('email')) icon = '📧';
+        else if (node.type.includes('slack')) icon = '💬';
+        else if (node.type.includes('database')) icon = '🗄️';
+        
+        return {
+          id: node.id || `node_${index}`,
+          type: type,
+          name: node.name,
+          icon: icon,
+          x: node.position ? node.position[0] : 100 + (index * 200),
+          y: node.position ? node.position[1] : 200,
+          status: node.disabled ? 'error' : 'success',
+          nodeType: node.type
+        };
+      });
+    }
+    
+    // Parse workflow connections from n8n data
+    function parseWorkflowConnections(workflowData) {
+      if (!workflowData.connections) return [];
+      
+      const connections = [];
+      
+      Object.entries(workflowData.connections).forEach(([fromNode, outputs]) => {
+        Object.entries(outputs).forEach(([outputType, outputConnections]) => {
+          outputConnections.forEach(connArray => {
+            connArray.forEach(conn => {
+              connections.push({
+                from: fromNode,
+                to: conn.node,
+                active: true
+              });
+            });
+          });
+        });
+      });
+      
+      return connections;
+    }
+    
+    // Get demo workflows if no real ones available
+    function getDemoWorkflows() {
+      return [
     
     // Render workflow list
     function renderWorkflowList() {
