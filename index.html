@@ -1036,6 +1036,7 @@
     <script src="azure-integration.js"></script>
     <script src="n8n-integration.js"></script>
     <script src="metrics-cache.js"></script>
+    <script src="github-integration.js"></script>
 </head>
 <body>
     <div class="noise-overlay"></div>
@@ -1465,7 +1466,7 @@
             }, 50);
         }
 
-        function renderProjects(projectList = projects) {
+        window.renderProjects = function renderProjects(projectList = projects) {
             const grid = document.getElementById('projectsGrid');
             
             if (projectList.length === 0) {
@@ -1493,12 +1494,19 @@
                                 <span>🏢</span>
                                 ${project.client}
                             </div>
+                            ${project.githubData ? `
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--sax-text-dim);">
+                                <span>📅</span>
+                                <span>Updated ${project.githubData.lastUpdatedFormatted}</span>
+                                ${project.githubData.language ? `<span style="margin-left: 8px;">💻 ${project.githubData.language}</span>` : ''}
+                            </div>
+                            ` : ''}
                         </div>
                         <div class="project-badge">${project.type}</div>
                     </div>
                     <div class="project-links">
                         <a href="#" class="link-btn" onclick="showProjectSummary('${project.id}'); return false;"><span>📄</span> Project Summary</a>
-                        ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub</a>` : ''}
+                        ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub${project.githubData && project.githubData.openIssues > 0 ? ` (${project.githubData.openIssues} issues)` : ''}</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
                         ${(project.n8nWorkflows && project.n8nWorkflows.main) || project.n8nMainUrl ? `<a href="#" class="link-btn" onclick="showWorkflowPreview('${project.n8nWorkflows?.main || project.n8nMainUrl || ''}'); return false;"><span>⚙️</span> Workflow Preview</a>` : ''}
                         <a href="#" class="link-btn" onclick="editProject('${project.id}'); return false;"><span>✏️</span> Edit</a>
