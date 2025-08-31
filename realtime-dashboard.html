@@ -10,8 +10,8 @@
   <!-- MSAL.js for Azure AD Authentication -->
   <script src="https://alcdn.msauth.net/browser/2.32.2/js/msal-browser.min.js"></script>
   
-  <!-- Chart.js for cost graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Chart.js for cost graphs - using local file to avoid CSP issues -->
+  <script src="chart.js"></script>
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1408,8 +1408,12 @@
         
         // Try to get storage account usage metrics
         try {
-          const today = new Date().toISOString().split('T')[0];
-          const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=UsedCapacity&timespan=${today}/${today}`;
+          // Use a date range of at least 1 minute as required by the API
+          const endTime = new Date();
+          const startTime = new Date(endTime.getTime() - 60000); // 1 minute ago
+          const startStr = startTime.toISOString();
+          const endStr = endTime.toISOString();
+          const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=UsedCapacity&timespan=${startStr}/${endStr}`;
           const metricsData = await callAzureAPI(metricsEndpoint);
           
           if (metricsData?.value?.[0]?.timeseries?.[0]?.data?.[0]) {
@@ -2053,17 +2057,10 @@ spec:
         return serviceNameMap[serviceLower];
       }
       
-      // Check if it's a decimal number (Azure often returns numeric codes)
+      // Don't try to map decimal numbers - they're actual costs, not service codes
       if (/^\d+\.?\d*$/.test(service)) {
-        const serviceCode = parseFloat(service).toFixed(0);
-        if (serviceNameMap[serviceCode]) {
-          return serviceNameMap[serviceCode];
-        }
-        if (serviceNameMap[serviceCode + '.0']) {
-          return serviceNameMap[serviceCode + '.0'];
-        }
-        // For unknown numeric codes, provide a better name
-        return `Azure Service ${serviceCode}`;
+        // This is likely a cost value that got misplaced, not a service name
+        return 'Unknown Service';
       }
       
       // Handle Microsoft.* resource provider format
@@ -2096,51 +2093,8 @@ spec:
       return cleaned;
     }
     
-    // Service name mapping - expanded to handle Azure service codes
+    // Service name mapping - only real Azure service names
     const serviceNameMap = {
-      // Common numeric codes from Azure (decimal format)
-      '0': 'Bandwidth',
-      '0.0': 'Bandwidth',
-      '1': 'Virtual Machines', 
-      '1.0': 'Virtual Machines',
-      '2': 'Storage',
-      '2.0': 'Storage',
-      '3': 'Load Balancer',
-      '3.0': 'Load Balancer',
-      '4': 'Virtual Network',
-      '4.0': 'Virtual Network',
-      '5': 'Azure DNS',
-      '5.0': 'Azure DNS',
-      '6': 'Key Vault',
-      '6.0': 'Key Vault',
-      '7': 'Virtual Network',
-      '7.0': 'Virtual Network',
-      '8': 'Storage',
-      '8.0': 'Storage',
-      '9': 'Azure Monitor',
-      '9.0': 'Azure Monitor',
-      '10': 'Container Registry',
-      '10.0': 'Container Registry',
-      '11': 'Azure Active Directory',
-      '11.0': 'Azure Active Directory',
-      '12': 'Azure Functions',
-      '12.0': 'Azure Functions',
-      '13': 'Static Web Apps',
-      '13.0': 'Static Web Apps',
-      '14': 'Azure Kubernetes Service',
-      '14.0': 'Azure Kubernetes Service',
-      '15': 'Azure Backup',
-      '15.0': 'Azure Backup',
-      '16': 'Logic Apps',
-      '16.0': 'Logic Apps',
-      '17': 'Azure Cognitive Services',
-      '17.0': 'Azure Cognitive Services',
-      '18': 'Azure DevOps',
-      '18.0': 'Azure DevOps',
-      '19': 'Azure Data Factory',
-      '19.0': 'Azure Data Factory',
-      '20': 'Static Web Apps',
-      '20.0': 'Static Web Apps',
       // Common Azure service names (as returned by Cost Management API)
       'bandwidth': 'Bandwidth',
       'compute': 'Virtual Machines',
@@ -2395,70 +2349,12 @@ spec:
       let totalCost = 0;
       
       costData.properties.rows.forEach(row => {
-        // Ensure service is a string
+        // The service name should be in the first column
         let service = String(row[0] || 'Unknown');
         const cost = row[1] || 0;
         
-        // First, check if this looks like a decimal number (common Azure pattern)
-        if (/^\d+\.\d+$/.test(service) || /^\d+$/.test(service)) {
-          // Try to map common decimal codes to services
-          const serviceCode = parseFloat(service).toFixed(0);
-          
-          // Map based on common Azure service codes
-          const decimalServiceMap = {
-            '8': 'Storage',
-            '7': 'Virtual Network',
-            '5': 'Azure DNS',
-            '3': 'Load Balancer',
-            '2': 'Virtual Machines',
-            '1': 'App Service',
-            '0': 'Bandwidth',
-            '4': 'Azure Active Directory',
-            '6': 'Key Vault',
-            '9': 'Azure Monitor',
-            '10': 'Container Registry',
-            '11': 'Azure SQL Database',
-            '12': 'Azure Functions',
-            '13': 'Static Web Apps',
-            '14': 'Application Gateway',
-            '15': 'Azure Firewall'
-          };
-          
-          if (decimalServiceMap[serviceCode]) {
-            service = decimalServiceMap[serviceCode];
-          } else {
-            // For unknown codes, try to be more descriptive
-            service = `Azure Service (Code: ${service})`;
-          }
-        } else {
-          // Try existing mapping
-          const serviceLower = service.toLowerCase();
-          if (serviceNameMap[service]) {
-            service = serviceNameMap[service];
-          } else if (serviceNameMap[serviceLower]) {
-            service = serviceNameMap[serviceLower];
-          } else if (service.includes('.')) {
-            // Handle microsoft.* services
-            service = service.replace(/microsoft\./gi, '')
-                            .replace(/[_-]/g, ' ')
-                            .split(' ')
-                            .filter(word => word.length > 0)
-                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                            .join(' ');
-          } else {
-            // Clean up any other format
-            service = service.replace(/[_-]/g, ' ')
-                            .split(' ')
-                            .filter(word => word.length > 0)
-                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                            .join(' ');
-            
-            // If still looks weird, prefix it
-            if (service.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
-              service = `Azure ${service}`;
-            }
-          }
-        }
+        // Use the mapping function to clean up service names
+        service = mapServiceName(service);
         
         if (!serviceData[service]) {
           serviceData[service] = { cost: 0, count: 0, originalName: String(row[0] || 'Unknown') };
@@ -2852,7 +2748,12 @@ spec:
       try {
         // Get resource details
         const subscriptionId = document.getElementById('subscriptionId').value;
-        const resourceEndpoint = `${resourceId}?api-version=2021-04-01`;
+        // Use appropriate API version based on resource type
+        let apiVersion = '2021-04-01';
+        if (resourceId.includes('/staticSites')) {
+          apiVersion = '2023-01-01';
+        }
+        const resourceEndpoint = `${resourceId}?api-version=${apiVersion}`;
         const resourceData = await callAzureAPI(resourceEndpoint);
         
         // Extract resource group from ID
@@ -3500,10 +3401,10 @@ spec:
           try {
             // Get metrics for the resource
             const today = new Date();
-            const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-            const endDate = today.toISOString();
+            const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            const endDate = today.toISOString().split('T')[0];
             
-            const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.CognitiveServices/accounts/${resource.name}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=TokenTransaction&timespan=${startDate}/${endDate}&aggregation=Total`;
+            const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.CognitiveServices/accounts/${resource.name}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=TokenTransaction&timespan=${startDate}T00:00:00Z/${endDate}T23:59:59Z&aggregation=Total`;
             const metricsData = await callAzureAPI(metricsEndpoint);
             
             if (metricsData?.value?.[0]?.timeseries?.[0]?.data) {

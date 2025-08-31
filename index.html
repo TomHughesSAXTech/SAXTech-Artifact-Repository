@@ -2084,12 +2084,22 @@
                             <button class="close-modal" onclick="this.closest('.modal').remove()">×</button>
                         </div>
                     </div>
-                    <div class="modal-body" style="padding: 0; height: calc(100% - 80px); overflow: hidden;">
-                        <iframe id="workflowPreviewFrame" 
-                            src="/n8n-workflow-preview.html" 
-                            style="width: 100%; height: 100%; border: none; transform-origin: top left; transition: transform 0.3s ease;"
-                            title="n8n Workflow Preview">
-                        </iframe>
+                    <div class="modal-body" style="padding: 20px; height: calc(100% - 80px); overflow: auto; background: #0a0e27;">
+                        <div style="text-align: center; padding: 40px; border: 2px dashed rgba(0, 212, 255, 0.3); border-radius: 12px; background: rgba(0, 212, 255, 0.05);">
+                            <div style="font-size: 48px; margin-bottom: 20px;">⚙️</div>
+                            <h3 style="color: #00d4ff; margin-bottom: 10px;">n8n Workflow Preview</h3>
+                            <p style="color: #94a3b8; margin-bottom: 20px;">Direct embedding is not available due to security restrictions.</p>
+                            <button class="btn btn-primary" onclick="window.open('${workflowUrl}', '_blank')" style="margin: 10px;">
+                                🔗 Open Workflow in New Tab
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.open('/n8n-workflow-preview.html', '_blank')" style="margin: 10px;">
+                                📊 Open Preview Tool
+                            </button>
+                            <div style="margin-top: 30px; padding: 20px; background: rgba(6, 8, 24, 0.6); border-radius: 8px;">
+                                <p style="font-size: 12px; color: #64748b;">Workflow URL:</p>
+                                <code style="color: #00d4ff; word-break: break-all;">${workflowUrl}</code>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
