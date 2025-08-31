@@ -145,7 +145,8 @@ class AzureBlobManager {
             });
 
             if (response.ok || response.status === 201) {
-                const project = this.projects.find(p => p.id === projectId);
+                // Convert to string for comparison since project IDs are now strings
+                const project = this.projects.find(p => String(p.id) === String(projectId));
                 if (project) {
                     const artifact = {
                         name: file.name,
@@ -163,7 +164,8 @@ class AzureBlobManager {
                 }
             } else {
                 // Fallback to localStorage only
-                const project = this.projects.find(p => p.id === projectId);
+                // Convert to string for comparison since project IDs are now strings
+                const project = this.projects.find(p => String(p.id) === String(projectId));
                 if (project) {
                     const artifact = {
                         name: file.name,
@@ -183,7 +185,8 @@ class AzureBlobManager {
         } catch (error) {
             console.error('Upload error:', error);
             // Fallback to localStorage
-            const project = this.projects.find(p => p.id === projectId);
+            // Convert to string for comparison since project IDs are now strings
+            const project = this.projects.find(p => String(p.id) === String(projectId));
             if (project) {
                 const artifact = {
                     name: file.name,
@@ -315,7 +318,8 @@ class AzureBlobManager {
 
     // Get project by ID
     getProject(id) {
-        return this.projects.find(p => p.id === id);
+        // Convert to string for comparison since project IDs are now strings
+        return this.projects.find(p => String(p.id) === String(id));
     }
 }
 

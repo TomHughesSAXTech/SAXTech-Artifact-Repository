@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>n8n Workflow Preview - SAXTech</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0e27 0%, #060818 100%);
+      color: #e2e8f0;
+      overflow: hidden;
+      height: 100vh;
+    }
+    
+    .container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: rgba(15, 23, 41, 0.95);
+      border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    .header-title {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ff6b6b 0%, #f06292 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 10px;
+      background: rgba(6, 8, 24, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 8px;
+      padding: 5px;
+    }
+    
+    .btn {
+      background: rgba(124, 58, 237, 0.2);
+      border: 1px solid rgba(124, 58, 237, 0.5);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn:hover {
+      background: rgba(124, 58, 237, 0.4);
+      transform: translateY(-2px);
+    }
+    
+    .btn.active {
+      background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+      border-color: transparent;
+    }
+    
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(6, 8, 24, 0.6);
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    
+    .zoom-level {
+      color: #00d4ff;
+      font-weight: 600;
+      min-width: 50px;
+      text-align: center;
+    }
+    
+    .sidebar {
+      position: absolute;
+      left: 0;
+      top: 70px;
+      bottom: 0;
+      width: 280px;
+      background: rgba(15, 23, 41, 0.95);
+      border-right: 1px solid rgba(0, 212, 255, 0.2);
+      padding: 20px;
+      overflow-y: auto;
+      z-index: 50;
+      transform: translateX(0);
+      transition: transform 0.3s;
+    }
+    
+    .sidebar.hidden {
+      transform: translateX(-100%);
+    }
+    
+    .workflow-list {
+      margin-top: 20px;
+    }
+    
+    .workflow-item {
+      background: rgba(6, 8, 24, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .workflow-item:hover {
+      background: rgba(0, 212, 255, 0.1);
+      transform: translateX(5px);
+    }
+    
+    .workflow-item.active {
+      border-color: #00d4ff;
+      background: rgba(0, 212, 255, 0.2);
+    }
+    
+    .workflow-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #00d4ff;
+      margin-bottom: 5px;
+    }
+    
+    .workflow-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    
+    .workflow-stats {
+      display: flex;
+      gap: 15px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 212, 255, 0.02) 0%, transparent 50%);
+    }
+    
+    #workflowCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: grab;
+    }
+    
+    #workflowCanvas:active {
+      cursor: grabbing;
+    }
+    
+    .node {
+      position: absolute;
+      background: rgba(15, 23, 41, 0.95);
+      border: 2px solid;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 180px;
+      cursor: move;
+      transition: transform 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+    
+    .node:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+    
+    .node.trigger {
+      border-color: #f59e0b;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(15, 23, 41, 0.95) 100%);
+    }
+    
+    .node.action {
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 41, 0.95) 100%);
+    }
+    
+    .node.logic {
+      border-color: #7c3aed;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(15, 23, 41, 0.95) 100%);
+    }
+    
+    .node.data {
+      border-color: #00d4ff;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(15, 23, 41, 0.95) 100%);
+    }
+    
+    .node-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    
+    .node.trigger .node-icon { background: rgba(245, 158, 11, 0.2); }
+    .node.action .node-icon { background: rgba(16, 185, 129, 0.2); }
+    .node.logic .node-icon { background: rgba(124, 58, 237, 0.2); }
+    .node.data .node-icon { background: rgba(0, 212, 255, 0.2); }
+    
+    .node-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+    
+    .node-type {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+    }
+    
+    .node-status {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 41, 0.95);
+    }
+    
+    .node-status.success { background: #10b981; }
+    .node-status.error { background: #ef4444; }
+    .node-status.running { 
+      background: #f59e0b;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .connection {
+      stroke: rgba(0, 212, 255, 0.4);
+      stroke-width: 2;
+      fill: none;
+      pointer-events: none;
+    }
+    
+    .connection.active {
+      stroke: #00d4ff;
+      stroke-width: 3;
+      filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.6));
+      animation: flow 2s linear infinite;
+    }
+    
+    @keyframes flow {
+      to {
+        stroke-dashoffset: -20;
+      }
+    }
+    
+    .connection.active {
+      stroke-dasharray: 10 5;
+    }
+    
+    .minimap {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      height: 150px;
+      background: rgba(15, 23, 41, 0.95);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 60;
+    }
+    
+    .minimap-viewport {
+      position: absolute;
+      border: 2px solid #00d4ff;
+      background: rgba(0, 212, 255, 0.1);
+      cursor: move;
+    }
+    
+    .info-panel {
+      position: absolute;
+      right: 20px;
+      top: 90px;
+      width: 300px;
+      background: rgba(15, 23, 41, 0.95);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 8px;
+      padding: 20px;
+      z-index: 55;
+      transform: translateX(0);
+      transition: transform 0.3s;
+    }
+    
+    .info-panel.hidden {
+      transform: translateX(120%);
+    }
+    
+    .info-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #00d4ff;
+      margin-bottom: 15px;
+    }
+    
+    .info-item {
+      margin-bottom: 12px;
+    }
+    
+    .info-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    
+    .info-value {
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    
+    .execution-log {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    
+    .log-entry {
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(6, 8, 24, 0.4);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .log-entry.success { border-left: 3px solid #10b981; }
+    .log-entry.error { border-left: 3px solid #ef4444; }
+    .log-entry.info { border-left: 3px solid #00d4ff; }
+    
+    .toggle-sidebar {
+      position: absolute;
+      left: 280px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(15, 23, 41, 0.95);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 5px;
+      cursor: pointer;
+      z-index: 51;
+      transition: left 0.3s;
+    }
+    
+    .toggle-sidebar.collapsed {
+      left: 0;
+    }
+    
+    .search-box {
+      width: 100%;
+      background: rgba(6, 8, 24, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      color: #e2e8f0;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .search-box:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-title">
+        <span>🔄</span>
+        <span>n8n Workflow Preview</span>
+      </div>
+      
+      <div class="controls">
+        <div class="control-group">
+          <button class="btn active" onclick="setViewMode('workflow')">
+            📊 Workflow
+          </button>
+          <button class="btn" onclick="setViewMode('execution')">
+            ▶️ Execution
+          </button>
+          <button class="btn" onclick="setViewMode('settings')">
+            ⚙️ Settings
+          </button>
+        </div>
+        
+        <div class="zoom-controls">
+          <button class="btn" onclick="zoomOut()">➖</button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button class="btn" onclick="zoomIn()">➕</button>
+          <button class="btn" onclick="resetZoom()">🔄</button>
+        </div>
+        
+        <button class="btn" onclick="toggleFullscreen()">
+          🖥️ Fullscreen
+        </button>
+        
+        <button class="btn" onclick="exportWorkflow()">
+          📥 Export
+        </button>
+      </div>
+    </div>
+    
+    <div class="sidebar" id="sidebar">
+      <input type="text" class="search-box" placeholder="Search workflows..." onkeyup="searchWorkflows(event)">
+      
+      <div class="workflow-list" id="workflowList">
+        <!-- Workflows will be dynamically added here -->
+      </div>
+    </div>
+    
+    <div class="toggle-sidebar" id="toggleSidebar" onclick="toggleSidebar()">
+      <span id="toggleIcon">◀</span>
+    </div>
+    
+    <div class="canvas-container" id="canvasContainer">
+      <svg id="workflowCanvas" width="5000" height="5000">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#00d4ff" />
+          </marker>
+        </defs>
+        <g id="connections"></g>
+      </svg>
+      <div id="nodes"></div>
+    </div>
+    
+    <div class="minimap" id="minimap">
+      <div class="minimap-viewport" id="minimapViewport"></div>
+    </div>
+    
+    <div class="info-panel hidden" id="infoPanel">
+      <h3 class="info-title" id="infoTitle">Node Details</h3>
+      <div id="infoContent">
+        <!-- Node info will be dynamically added here -->
+      </div>
+      <div class="execution-log">
+        <div class="info-label">Execution Log</div>
+        <div id="executionLog">
+          <!-- Log entries will be added here -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Sample workflows data
+    const workflows = [
+      {
+        id: 'workflow1',
+        name: 'Azure Cost Monitor',
+        description: 'Monitors Azure costs and sends alerts when threshold exceeded',
+        nodes: 12,
+        executions: 145,
+        lastRun: '2 hours ago',
+        nodes_data: [
+          { id: 'trigger1', type: 'trigger', name: 'Schedule Trigger', icon: '⏰', x: 100, y: 200, status: 'success' },
+          { id: 'azure1', type: 'data', name: 'Azure Cost API', icon: '☁️', x: 300, y: 200, status: 'success' },
+          { id: 'transform1', type: 'logic', name: 'Transform Data', icon: '🔄', x: 500, y: 200, status: 'success' },
+          { id: 'if1', type: 'logic', name: 'Check Threshold', icon: '❓', x: 700, y: 200, status: 'success' },
+          { id: 'email1', type: 'action', name: 'Send Alert Email', icon: '📧', x: 900, y: 100, status: 'success' },
+          { id: 'slack1', type: 'action', name: 'Slack Notification', icon: '💬', x: 900, y: 300, status: 'error' }
+        ],
+        connections: [
+          { from: 'trigger1', to: 'azure1', active: true },
+          { from: 'azure1', to: 'transform1', active: true },
+          { from: 'transform1', to: 'if1', active: true },
+          { from: 'if1', to: 'email1', active: true },
+          { from: 'if1', to: 'slack1', active: false }
+        ]
+      },
+      {
+        id: 'workflow2',
+        name: 'GitHub Backup Automation',
+        description: 'Automatically backs up GitHub repositories to Azure Storage',
+        nodes: 8,
+        executions: 423,
+        lastRun: '30 minutes ago',
+        nodes_data: [
+          { id: 'cron1', type: 'trigger', name: 'Daily at 2 AM', icon: '⏰', x: 100, y: 250, status: 'success' },
+          { id: 'github1', type: 'data', name: 'List Repositories', icon: '🐙', x: 300, y: 250, status: 'success' },
+          { id: 'loop1', type: 'logic', name: 'For Each Repo', icon: '🔁', x: 500, y: 250, status: 'running' },
+          { id: 'git1', type: 'action', name: 'Clone Repository', icon: '📦', x: 700, y: 150, status: 'success' },
+          { id: 'compress1', type: 'logic', name: 'Compress Files', icon: '🗜️', x: 900, y: 150, status: 'success' },
+          { id: 'azure2', type: 'action', name: 'Upload to Azure', icon: '☁️', x: 1100, y: 250, status: 'success' },
+          { id: 'cleanup1', type: 'action', name: 'Cleanup Temp', icon: '🗑️', x: 700, y: 350, status: 'success' },
+          { id: 'notify1', type: 'action', name: 'Send Report', icon: '📊', x: 1300, y: 250, status: 'success' }
+        ],
+        connections: [
+          { from: 'cron1', to: 'github1', active: true },
+          { from: 'github1', to: 'loop1', active: true },
+          { from: 'loop1', to: 'git1', active: true },
+          { from: 'git1', to: 'compress1', active: true },
+          { from: 'compress1', to: 'azure2', active: true },
+          { from: 'loop1', to: 'cleanup1', active: true },
+          { from: 'azure2', to: 'notify1', active: true }
+        ]
+      },
+      {
+        id: 'workflow3',
+        name: 'Customer Onboarding',
+        description: 'Automated customer onboarding with CRM and email integration',
+        nodes: 10,
+        executions: 89,
+        lastRun: '1 day ago',
+        nodes_data: [
+          { id: 'webhook1', type: 'trigger', name: 'Webhook', icon: '🔗', x: 100, y: 200, status: 'success' },
+          { id: 'validate1', type: 'logic', name: 'Validate Data', icon: '✅', x: 300, y: 200, status: 'success' },
+          { id: 'crm1', type: 'action', name: 'Create in CRM', icon: '📇', x: 500, y: 200, status: 'success' },
+          { id: 'template1', type: 'logic', name: 'Email Template', icon: '📝', x: 700, y: 100, status: 'success' },
+          { id: 'send1', type: 'action', name: 'Send Welcome', icon: '📧', x: 900, y: 100, status: 'success' },
+          { id: 'azure3', type: 'action', name: 'Create Resources', icon: '☁️', x: 700, y: 300, status: 'success' },
+          { id: 'wait1', type: 'logic', name: 'Wait 1 Day', icon: '⏳', x: 900, y: 300, status: 'success' },
+          { id: 'followup1', type: 'action', name: 'Follow-up Email', icon: '📧', x: 1100, y: 200, status: 'success' }
+        ],
+        connections: [
+          { from: 'webhook1', to: 'validate1', active: true },
+          { from: 'validate1', to: 'crm1', active: true },
+          { from: 'crm1', to: 'template1', active: true },
+          { from: 'template1', to: 'send1', active: true },
+          { from: 'crm1', to: 'azure3', active: true },
+          { from: 'azure3', to: 'wait1', active: true },
+          { from: 'wait1', to: 'followup1', active: true }
+        ]
+      }
+    ];
+    
+    let currentWorkflow = null;
+    let currentZoom = 1;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let canvasOffset = { x: 0, y: 0 };
+    let selectedNode = null;
+    
+    // Initialize
+    window.onload = function() {
+      renderWorkflowList();
+      selectWorkflow(workflows[0]);
+      setupCanvasInteractions();
+      updateMinimap();
+    };
+    
+    // Render workflow list
+    function renderWorkflowList() {
+      const list = document.getElementById('workflowList');
+      list.innerHTML = workflows.map(w => `
+        <div class="workflow-item ${w.id === currentWorkflow?.id ? 'active' : ''}" onclick="selectWorkflow('${w.id}')">
+          <div class="workflow-name">${w.name}</div>
+          <div class="workflow-desc">${w.description}</div>
+          <div class="workflow-stats">
+            <span>📦 ${w.nodes} nodes</span>
+            <span>▶️ ${w.executions} runs</span>
+            <span>🕐 ${w.lastRun}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Select workflow
+    function selectWorkflow(workflowId) {
+      if (typeof workflowId === 'string') {
+        currentWorkflow = workflows.find(w => w.id === workflowId);
+      } else {
+        currentWorkflow = workflowId;
+      }
+      
+      renderWorkflowList();
+      renderWorkflow();
+      updateMinimap();
+    }
+    
+    // Render workflow
+    function renderWorkflow() {
+      if (!currentWorkflow) return;
+      
+      const nodesContainer = document.getElementById('nodes');
+      const connectionsContainer = document.getElementById('connections');
+      
+      // Clear existing
+      nodesContainer.innerHTML = '';
+      connectionsContainer.innerHTML = '';
+      
+      // Render connections
+      currentWorkflow.connections.forEach(conn => {
+        const fromNode = currentWorkflow.nodes_data.find(n => n.id === conn.from);
+        const toNode = currentWorkflow.nodes_data.find(n => n.id === conn.to);
+        
+        if (fromNode && toNode) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          
+          // Calculate bezier curve
+          const startX = fromNode.x + 90;
+          const startY = fromNode.y + 35;
+          const endX = toNode.x;
+          const endY = toNode.y + 35;
+          const midX = (startX + endX) / 2;
+          
+          const d = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+          
+          path.setAttribute('d', d);
+          path.setAttribute('class', `connection ${conn.active ? 'active' : ''}`);
+          path.setAttribute('marker-end', 'url(#arrowhead)');
+          
+          connectionsContainer.appendChild(path);
+        }
+      });
+      
+      // Render nodes
+      currentWorkflow.nodes_data.forEach(node => {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = `node ${node.type}`;
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+        nodeEl.setAttribute('data-node-id', node.id);
+        
+        nodeEl.innerHTML = `
+          <div class="node-icon">${node.icon}</div>
+          <div class="node-title">${node.name}</div>
+          <div class="node-type">${node.type}</div>
+          ${node.status ? `<div class="node-status ${node.status}"></div>` : ''}
+        `;
+        
+        nodeEl.onclick = () => selectNode(node);
+        
+        // Make nodes draggable
+        nodeEl.onmousedown = (e) => startNodeDrag(e, node);
+        
+        nodesContainer.appendChild(nodeEl);
+      });
+    }
+    
+    // Node dragging
+    function startNodeDrag(e, node) {
+      e.stopPropagation();
+      const nodeEl = e.currentTarget;
+      const startX = e.clientX - node.x;
+      const startY = e.clientY - node.y;
+      
+      const onMouseMove = (e) => {
+        node.x = (e.clientX - startX) / currentZoom;
+        node.y = (e.clientY - startY) / currentZoom;
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+        renderWorkflow(); // Re-render connections
+      };
+      
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        updateMinimap();
+      };
+      
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+    
+    // Select node
+    function selectNode(node) {
+      selectedNode = node;
+      const panel = document.getElementById('infoPanel');
+      const title = document.getElementById('infoTitle');
+      const content = document.getElementById('infoContent');
+      const log = document.getElementById('executionLog');
+      
+      panel.classList.remove('hidden');
+      title.textContent = node.name;
+      
+      content.innerHTML = `
+        <div class="info-item">
+          <div class="info-label">Type</div>
+          <div class="info-value">${node.type}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Status</div>
+          <div class="info-value" style="color: ${node.status === 'success' ? '#10b981' : node.status === 'error' ? '#ef4444' : '#f59e0b'}">
+            ${node.status || 'Not executed'}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Position</div>
+          <div class="info-value">X: ${node.x}, Y: ${node.y}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Connected To</div>
+          <div class="info-value">
+            ${currentWorkflow.connections
+              .filter(c => c.from === node.id)
+              .map(c => currentWorkflow.nodes_data.find(n => n.id === c.to)?.name)
+              .filter(Boolean)
+              .join(', ') || 'None'}
+          </div>
+        </div>
+      `;
+      
+      // Sample execution log
+      log.innerHTML = `
+        <div class="log-entry ${node.status}">
+          <div>[${new Date().toLocaleTimeString()}] Node executed successfully</div>
+        </div>
+        <div class="log-entry info">
+          <div>[${new Date().toLocaleTimeString()}] Input: { "data": "sample" }</div>
+        </div>
+        <div class="log-entry info">
+          <div>[${new Date().toLocaleTimeString()}] Output: { "result": "processed" }</div>
+        </div>
+      `;
+    }
+    
+    // Setup canvas interactions
+    function setupCanvasInteractions() {
+      const canvas = document.getElementById('workflowCanvas');
+      const container = document.getElementById('canvasContainer');
+      
+      // Pan functionality
+      canvas.onmousedown = (e) => {
+        if (e.target === canvas) {
+          isDragging = true;
+          dragStart = { x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y };
+          canvas.style.cursor = 'grabbing';
+        }
+      };
+      
+      canvas.onmousemove = (e) => {
+        if (isDragging) {
+          canvasOffset.x = e.clientX - dragStart.x;
+          canvasOffset.y = e.clientY - dragStart.y;
+          
+          canvas.style.transform = `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${currentZoom})`;
+          document.getElementById('nodes').style.transform = `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${currentZoom})`;
+          
+          updateMinimap();
+        }
+      };
+      
+      canvas.onmouseup = () => {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+      };
+      
+      // Zoom with mouse wheel
+      container.onwheel = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        currentZoom = Math.min(Math.max(currentZoom * delta, 0.1), 3);
+        updateZoom();
+      };
+    }
+    
+    // Zoom controls
+    function zoomIn() {
+      currentZoom = Math.min(currentZoom + 0.1, 3);
+      updateZoom();
+    }
+    
+    function zoomOut() {
+      currentZoom = Math.max(currentZoom - 0.1, 0.1);
+      updateZoom();
+    }
+    
+    function resetZoom() {
+      currentZoom = 1;
+      canvasOffset = { x: 0, y: 0 };
+      updateZoom();
+    }
+    
+    function updateZoom() {
+      const canvas = document.getElementById('workflowCanvas');
+      const nodes = document.getElementById('nodes');
+      
+      canvas.style.transform = `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${currentZoom})`;
+      nodes.style.transform = `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${currentZoom})`;
+      
+      document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+      updateMinimap();
+    }
+    
+    // Update minimap
+    function updateMinimap() {
+      const viewport = document.getElementById('minimapViewport');
+      const containerWidth = document.getElementById('canvasContainer').offsetWidth;
+      const containerHeight = document.getElementById('canvasContainer').offsetHeight;
+      
+      const scale = 0.04; // Minimap scale
+      
+      viewport.style.width = `${containerWidth * scale / currentZoom}px`;
+      viewport.style.height = `${containerHeight * scale / currentZoom}px`;
+      viewport.style.left = `${-canvasOffset.x * scale / currentZoom + 100}px`;
+      viewport.style.top = `${-canvasOffset.y * scale / currentZoom + 75}px`;
+    }
+    
+    // Toggle sidebar
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('toggleSidebar');
+      const icon = document.getElementById('toggleIcon');
+      
+      sidebar.classList.toggle('hidden');
+      toggle.classList.toggle('collapsed');
+      icon.textContent = sidebar.classList.contains('hidden') ? '▶' : '◀';
+    }
+    
+    // Search workflows
+    function searchWorkflows(event) {
+      const query = event.target.value.toLowerCase();
+      const items = document.querySelectorAll('.workflow-item');
+      
+      items.forEach(item => {
+        const name = item.querySelector('.workflow-name').textContent.toLowerCase();
+        const desc = item.querySelector('.workflow-desc').textContent.toLowerCase();
+        
+        if (name.includes(query) || desc.includes(query)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+    
+    // Export workflow
+    function exportWorkflow() {
+      if (!currentWorkflow) return;
+      
+      const data = JSON.stringify(currentWorkflow, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentWorkflow.name.replace(/\s+/g, '_')}.json`;
+      a.click();
+    }
+    
+    // Toggle fullscreen
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    
+    // Set view mode
+    function setViewMode(mode) {
+      const buttons = document.querySelectorAll('.control-group .btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // In a real implementation, this would switch between different views
+      console.log('Switching to', mode, 'mode');
+    }
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '=' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === '-' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === '0' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        resetZoom();
+      } else if (e.key === 'Delete' && selectedNode) {
+        // Delete selected node
+        const index = currentWorkflow.nodes_data.findIndex(n => n.id === selectedNode.id);
+        if (index > -1) {
+          currentWorkflow.nodes_data.splice(index, 1);
+          currentWorkflow.connections = currentWorkflow.connections.filter(
+            c => c.from !== selectedNode.id && c.to !== selectedNode.id
+          );
+          renderWorkflow();
+          document.getElementById('infoPanel').classList.add('hidden');
+          selectedNode = null;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

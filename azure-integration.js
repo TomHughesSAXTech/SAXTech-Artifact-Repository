@@ -87,7 +87,10 @@ class AzureIntegration {
                 const data = await response.json();
                 const resources = data.value || [];
                 
-                // Categorize resources
+                // Fetch cost data for this resource group
+                const costData = await this.fetchResourceGroupCosts(resourceGroupName);
+                
+                // Categorize resources with cost data
                 const categorizedResources = resources.map(resource => {
                     const type = resource.type.toLowerCase();
                     let category = 'Other';
@@ -116,13 +119,18 @@ class AzureIntegration {
                         url = `${resource.name}.database.windows.net`;
                     }
                     
+                    // Get cost for this specific resource
+                    const resourceCost = costData.resources?.[resource.id] || 0;
+                    
                     return {
                         name: resource.name,
                         type: category,
                         url: url,
                         id: resource.id,
                         location: resource.location,
-                        resourceType: resource.type
+                        resourceType: resource.type,
+                        monthlyCost: resourceCost,
+                        monthlyCostFormatted: `$${resourceCost.toFixed(2)}`
                     };
                 });
                 
@@ -134,6 +142,83 @@ class AzureIntegration {
         }
         
         return [];
+    }
+    
+    async fetchResourceGroupCosts(resourceGroupName) {
+        if (!this.accessToken || !this.subscriptionId) {
+            return { total: 0, resources: {} };
+        }
+
+        try {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(1); // Month to date
+            
+            const body = {
+                type: 'Usage',
+                timeframe: 'Custom',
+                timePeriod: {
+                    from: startDate.toISOString().split('T')[0],
+                    to: endDate.toISOString().split('T')[0]
+                },
+                dataset: {
+                    granularity: 'None',
+                    aggregation: {
+                        totalCost: {
+                            name: 'Cost',
+                            function: 'Sum'
+                        }
+                    },
+                    grouping: [
+                        {
+                            type: 'Dimension',
+                            name: 'ResourceId'
+                        }
+                    ],
+                    filter: {
+                        dimensions: {
+                            name: 'ResourceGroupName',
+                            operator: 'In',
+                            values: [resourceGroupName]
+                        }
+                    }
+                }
+            };
+
+            const response = await fetch(
+                `https://management.azure.com/subscriptions/${this.subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2021-10-01`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                const resources = {};
+                let total = 0;
+                
+                // Process cost data by resource
+                if (data.properties?.rows) {
+                    data.properties.rows.forEach(row => {
+                        const cost = row[0] || 0;
+                        const resourceId = row[1];
+                        resources[resourceId] = cost;
+                        total += cost;
+                    });
+                }
+                
+                return { total, resources };
+            }
+        } catch (error) {
+            console.error('Failed to fetch resource group costs:', error);
+        }
+        
+        return { total: 0, resources: {} };
     }
 
     async fetchResourceCounts() {

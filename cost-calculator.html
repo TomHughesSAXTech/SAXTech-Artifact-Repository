@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAXTech Cost Calculator & P&L Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0e27 0%, #060818 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(15, 23, 41, 0.9);
+      border-radius: 16px;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    
+    .header h1 {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      color: #94a3b8;
+      font-size: 16px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+    
+    .section {
+      background: rgba(15, 23, 41, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 12px;
+      padding: 25px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .section:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+    }
+    
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #00d4ff;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    .input-label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+    
+    .input-field {
+      width: 100%;
+      background: rgba(6, 8, 24, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      color: #e2e8f0;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+      width: 100%;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: rgba(124, 58, 237, 0.2);
+      border: 1px solid rgba(124, 58, 237, 0.5);
+    }
+    
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    
+    .item-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(6, 8, 24, 0.4);
+      border-radius: 8px;
+    }
+    
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(15, 23, 41, 0.6);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 212, 255, 0.1);
+    }
+    
+    .item-name {
+      color: #00d4ff;
+      font-weight: 500;
+    }
+    
+    .item-value {
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 20px;
+      margin-left: 10px;
+    }
+    
+    .results {
+      background: rgba(15, 23, 41, 0.8);
+      border: 2px solid rgba(124, 58, 237, 0.5);
+      border-radius: 16px;
+      padding: 30px;
+      margin-top: 40px;
+    }
+    
+    .results-title {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .metric-card {
+      background: rgba(6, 8, 24, 0.6);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    
+    .metric-value {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+    
+    .metric-subtitle {
+      font-size: 12px;
+      color: #64748b;
+    }
+    
+    .positive {
+      color: #10b981;
+    }
+    
+    .negative {
+      color: #ef4444;
+    }
+    
+    .neutral {
+      color: #00d4ff;
+    }
+    
+    .breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    .breakdown-table th {
+      text-align: left;
+      padding: 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    
+    .breakdown-table td {
+      padding: 12px;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+    }
+    
+    .breakdown-table tr:hover {
+      background: rgba(0, 212, 255, 0.05);
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(6, 8, 24, 0.4);
+      border-radius: 12px;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    
+    .sync-status {
+      padding: 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      color: #10b981;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    
+    .loading {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💰 SAXTech Cost Calculator & P&L Dashboard</h1>
+      <p>Track revenue, costs, and profitability in real-time</p>
+    </div>
+    
+    <div id="syncStatus" class="sync-status">
+      ⚡ Syncing with Real-Time Dashboard...
+    </div>
+    
+    <div class="grid">
+      <!-- Revenue Section -->
+      <div class="section">
+        <h2 class="section-title">
+          <span>📈</span>
+          Monthly Recurring Revenue (MRR)
+        </h2>
+        
+        <div class="input-group">
+          <label class="input-label">Project/Client Name</label>
+          <input type="text" class="input-field" id="projectName" placeholder="e.g., Client Website">
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Monthly Revenue ($)</label>
+          <input type="number" class="input-field" id="projectRevenue" placeholder="0.00" step="100">
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Type</label>
+          <select class="input-field" id="projectType">
+            <option value="recurring">Recurring (Monthly)</option>
+            <option value="annual">Annual (÷12)</option>
+            <option value="onetime">One-time Project</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="addProject()">Add Project</button>
+        
+        <div class="item-list" id="projectsList">
+          <div style="color: #64748b; text-align: center;">No projects added yet</div>
+        </div>
+      </div>
+      
+      <!-- Azure Costs Section -->
+      <div class="section">
+        <h2 class="section-title">
+          <span>☁️</span>
+          Azure Infrastructure Costs
+        </h2>
+        
+        <div class="sync-status" style="margin-bottom: 15px;">
+          <span id="azureSync">🔄 Loading from dashboard...</span>
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Monthly Azure Cost (Auto-synced)</label>
+          <input type="number" class="input-field" id="azureCost" placeholder="0.00" readonly>
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Override Value (Optional)</label>
+          <input type="number" class="input-field" id="azureOverride" placeholder="Leave empty to use synced value">
+        </div>
+        
+        <button class="btn btn-secondary" onclick="syncAzureCosts()">🔄 Refresh Azure Data</button>
+        
+        <div style="margin-top: 15px; padding: 10px; background: rgba(6, 8, 24, 0.4); border-radius: 8px;">
+          <div style="font-size: 12px; color: #94a3b8;">Current Month Projection:</div>
+          <div style="font-size: 20px; color: #00d4ff; font-weight: 600;" id="azureProjection">$0.00</div>
+        </div>
+      </div>
+      
+      <!-- Tool Costs Section -->
+      <div class="section">
+        <h2 class="section-title">
+          <span>🛠️</span>
+          Tool & Service Costs
+        </h2>
+        
+        <div class="sync-status" style="margin-bottom: 15px;">
+          <span id="toolsSync">🔄 Loading from dashboard...</span>
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Tool/Service Name</label>
+          <input type="text" class="input-field" id="toolName" placeholder="e.g., GitHub, Slack">
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Monthly Cost ($)</label>
+          <input type="number" class="input-field" id="toolCost" placeholder="0.00" step="10">
+        </div>
+        
+        <button class="btn btn-secondary" onclick="addTool()">Add Tool</button>
+        
+        <div class="item-list" id="toolsList">
+          <div style="color: #64748b; text-align: center;">Loading tools...</div>
+        </div>
+      </div>
+      
+      <!-- Other Expenses Section -->
+      <div class="section">
+        <h2 class="section-title">
+          <span>💳</span>
+          Other Business Expenses
+        </h2>
+        
+        <div class="input-group">
+          <label class="input-label">Expense Name</label>
+          <input type="text" class="input-field" id="expenseName" placeholder="e.g., Domain, SSL Certificate">
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Monthly Cost ($)</label>
+          <input type="number" class="input-field" id="expenseCost" placeholder="0.00" step="10">
+        </div>
+        
+        <div class="input-group">
+          <label class="input-label">Category</label>
+          <select class="input-field" id="expenseCategory">
+            <option value="hosting">Hosting & Domains</option>
+            <option value="marketing">Marketing & Ads</option>
+            <option value="software">Software Licenses</option>
+            <option value="professional">Professional Services</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="addExpense()">Add Expense</button>
+        
+        <div class="item-list" id="expensesList">
+          <div style="color: #64748b; text-align: center;">No expenses added yet</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Results Section -->
+    <div class="results">
+      <h2 class="results-title">📊 Profit & Loss Summary</h2>
+      
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Revenue</div>
+          <div class="metric-value positive" id="totalRevenue">$0</div>
+          <div class="metric-subtitle">Per month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Total Costs</div>
+          <div class="metric-value negative" id="totalCosts">$0</div>
+          <div class="metric-subtitle">Per month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Net Profit</div>
+          <div class="metric-value" id="netProfit">$0</div>
+          <div class="metric-subtitle">Per month</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Profit Margin</div>
+          <div class="metric-value" id="profitMargin">0%</div>
+          <div class="metric-subtitle">Net margin</div>
+        </div>
+      </div>
+      
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Annual Revenue</div>
+          <div class="metric-value positive" id="annualRevenue">$0</div>
+          <div class="metric-subtitle">Projected yearly</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Annual Costs</div>
+          <div class="metric-value negative" id="annualCosts">$0</div>
+          <div class="metric-subtitle">Projected yearly</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Annual Profit</div>
+          <div class="metric-value" id="annualProfit">$0</div>
+          <div class="metric-subtitle">Projected yearly</div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-label">Break-even Point</div>
+          <div class="metric-value neutral" id="breakeven">$0</div>
+          <div class="metric-subtitle">Revenue needed</div>
+        </div>
+      </div>
+      
+      <!-- Cost Breakdown Table -->
+      <h3 style="color: #00d4ff; margin-top: 30px; margin-bottom: 15px;">Cost Breakdown by Category</h3>
+      <table class="breakdown-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Items</th>
+            <th>Monthly Cost</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownTable">
+          <tr>
+            <td colspan="4" style="text-align: center; color: #64748b;">No data yet</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- Recommendations -->
+      <div style="margin-top: 30px; padding: 20px; background: rgba(124, 58, 237, 0.1); border-radius: 12px; border: 1px solid rgba(124, 58, 237, 0.3);">
+        <h3 style="color: #7c3aed; margin-bottom: 15px;">💡 Insights & Recommendations</h3>
+        <div id="recommendations" style="color: #e2e8f0; line-height: 1.6;">
+          Add revenue and costs to see personalized insights...
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="actions">
+        <button class="btn" onclick="exportData()">📥 Export Data</button>
+        <button class="btn btn-secondary" onclick="saveData()">💾 Save Locally</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ Clear All</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Data storage
+    let projects = [];
+    let tools = [];
+    let expenses = [];
+    let azureCost = 0;
+    
+    // Initialize
+    window.onload = function() {
+      loadSavedData();
+      syncWithDashboard();
+      calculateTotals();
+    };
+    
+    // Sync with Real-Time Dashboard
+    function syncWithDashboard() {
+      // Try to get Azure costs from dashboard localStorage
+      try {
+        // Get projected cost from dashboard
+        const dashboardData = localStorage.getItem('azure_projection');
+        if (dashboardData) {
+          azureCost = parseFloat(dashboardData) || 0;
+          document.getElementById('azureCost').value = azureCost.toFixed(2);
+          document.getElementById('azureProjection').textContent = `$${azureCost.toFixed(2)}`;
+          document.getElementById('azureSync').textContent = '✅ Synced with dashboard';
+          document.getElementById('azureSync').style.color = '#10b981';
+        }
+        
+        // Get tool costs from dashboard
+        const toolCosts = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+        tools = [];
+        
+        if (toolCosts.warp && toolCosts.warp > 0) {
+          tools.push({ name: 'WARP Terminal', cost: toolCosts.warp });
+        }
+        if (toolCosts.claude && toolCosts.claude > 0) {
+          tools.push({ name: 'Claude (Anthropic)', cost: toolCosts.claude });
+        }
+        if (toolCosts.chatgpt && toolCosts.chatgpt > 0) {
+          tools.push({ name: 'ChatGPT (OpenAI)', cost: toolCosts.chatgpt });
+        }
+        if (toolCosts.others) {
+          Object.entries(toolCosts.others).forEach(([name, cost]) => {
+            tools.push({ name, cost });
+          });
+        }
+        
+        // Get AI usage costs
+        const aiUsage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        if (aiUsage[currentMonth]) {
+          const monthData = aiUsage[currentMonth];
+          let totalAiCost = 0;
+          
+          if (monthData['gpt4o-mini']?.cost) totalAiCost += monthData['gpt4o-mini'].cost;
+          if (monthData['embeddings']?.cost) totalAiCost += monthData['embeddings'].cost;
+          if (monthData['document']?.cost) totalAiCost += monthData['document'].cost;
+          if (monthData['custom']?.totalCost) totalAiCost += monthData['custom'].totalCost;
+          
+          if (totalAiCost > 0) {
+            // Project monthly cost based on daily usage
+            const dayOfMonth = new Date().getDate();
+            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            const projectedMonthly = (totalAiCost / dayOfMonth) * daysInMonth;
+            
+            tools.push({ 
+              name: 'AI Models Usage (Projected)', 
+              cost: projectedMonthly 
+            });
+          }
+        }
+        
+        updateToolsList();
+        document.getElementById('toolsSync').textContent = '✅ Synced with dashboard';
+        document.getElementById('toolsSync').style.color = '#10b981';
+        
+      } catch (error) {
+        console.error('Error syncing with dashboard:', error);
+        document.getElementById('azureSync').textContent = '⚠️ Using manual input';
+        document.getElementById('toolsSync').textContent = '⚠️ Using manual input';
+      }
+      
+      // Hide sync status after 3 seconds
+      setTimeout(() => {
+        document.getElementById('syncStatus').style.display = 'none';
+      }, 3000);
+    }
+    
+    // Sync Azure Costs
+    function syncAzureCosts() {
+      syncWithDashboard();
+      calculateTotals();
+      showMessage('Azure data refreshed!');
+    }
+    
+    // Add Project
+    function addProject() {
+      const name = document.getElementById('projectName').value;
+      const revenue = parseFloat(document.getElementById('projectRevenue').value) || 0;
+      const type = document.getElementById('projectType').value;
+      
+      if (name && revenue > 0) {
+        let monthlyRevenue = revenue;
+        if (type === 'annual') {
+          monthlyRevenue = revenue / 12;
+        }
+        
+        projects.push({ name, revenue: monthlyRevenue, type });
+        
+        document.getElementById('projectName').value = '';
+        document.getElementById('projectRevenue').value = '';
+        
+        updateProjectsList();
+        calculateTotals();
+        saveData();
+      }
+    }
+    
+    // Add Tool
+    function addTool() {
+      const name = document.getElementById('toolName').value;
+      const cost = parseFloat(document.getElementById('toolCost').value) || 0;
+      
+      if (name && cost > 0) {
+        tools.push({ name, cost });
+        
+        document.getElementById('toolName').value = '';
+        document.getElementById('toolCost').value = '';
+        
+        updateToolsList();
+        calculateTotals();
+        saveData();
+      }
+    }
+    
+    // Add Expense
+    function addExpense() {
+      const name = document.getElementById('expenseName').value;
+      const cost = parseFloat(document.getElementById('expenseCost').value) || 0;
+      const category = document.getElementById('expenseCategory').value;
+      
+      if (name && cost > 0) {
+        expenses.push({ name, cost, category });
+        
+        document.getElementById('expenseName').value = '';
+        document.getElementById('expenseCost').value = '';
+        
+        updateExpensesList();
+        calculateTotals();
+        saveData();
+      }
+    }
+    
+    // Update Lists
+    function updateProjectsList() {
+      const list = document.getElementById('projectsList');
+      if (projects.length === 0) {
+        list.innerHTML = '<div style="color: #64748b; text-align: center;">No projects added yet</div>';
+      } else {
+        list.innerHTML = projects.map((p, i) => `
+          <div class="item">
+            <span class="item-name">${p.name}</span>
+            <div>
+              <span class="item-value">$${p.revenue.toFixed(2)}/mo</span>
+              <button class="remove-btn" onclick="removeProject(${i})">×</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    
+    function updateToolsList() {
+      const list = document.getElementById('toolsList');
+      if (tools.length === 0) {
+        list.innerHTML = '<div style="color: #64748b; text-align: center;">No tools added yet</div>';
+      } else {
+        list.innerHTML = tools.map((t, i) => `
+          <div class="item">
+            <span class="item-name">${t.name}</span>
+            <div>
+              <span class="item-value">$${t.cost.toFixed(2)}/mo</span>
+              <button class="remove-btn" onclick="removeTool(${i})">×</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    
+    function updateExpensesList() {
+      const list = document.getElementById('expensesList');
+      if (expenses.length === 0) {
+        list.innerHTML = '<div style="color: #64748b; text-align: center;">No expenses added yet</div>';
+      } else {
+        list.innerHTML = expenses.map((e, i) => `
+          <div class="item">
+            <span class="item-name">${e.name}</span>
+            <div>
+              <span class="item-value">$${e.cost.toFixed(2)}/mo</span>
+              <button class="remove-btn" onclick="removeExpense(${i})">×</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    
+    // Remove Items
+    function removeProject(index) {
+      projects.splice(index, 1);
+      updateProjectsList();
+      calculateTotals();
+      saveData();
+    }
+    
+    function removeTool(index) {
+      tools.splice(index, 1);
+      updateToolsList();
+      calculateTotals();
+      saveData();
+    }
+    
+    function removeExpense(index) {
+      expenses.splice(index, 1);
+      updateExpensesList();
+      calculateTotals();
+      saveData();
+    }
+    
+    // Calculate Totals
+    function calculateTotals() {
+      // Revenue
+      const totalRevenue = projects.reduce((sum, p) => sum + p.revenue, 0);
+      
+      // Costs
+      const azureOverride = parseFloat(document.getElementById('azureOverride').value) || 0;
+      const actualAzureCost = azureOverride || azureCost;
+      const toolCosts = tools.reduce((sum, t) => sum + t.cost, 0);
+      const expenseCosts = expenses.reduce((sum, e) => sum + e.cost, 0);
+      const totalCosts = actualAzureCost + toolCosts + expenseCosts;
+      
+      // Profit
+      const netProfit = totalRevenue - totalCosts;
+      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue * 100) : 0;
+      
+      // Update monthly metrics
+      document.getElementById('totalRevenue').textContent = `$${totalRevenue.toFixed(0)}`;
+      document.getElementById('totalCosts').textContent = `$${totalCosts.toFixed(0)}`;
+      document.getElementById('netProfit').textContent = `$${netProfit.toFixed(0)}`;
+      document.getElementById('netProfit').className = netProfit >= 0 ? 'metric-value positive' : 'metric-value negative';
+      document.getElementById('profitMargin').textContent = `${profitMargin.toFixed(1)}%`;
+      document.getElementById('profitMargin').className = profitMargin >= 0 ? 'metric-value positive' : 'metric-value negative';
+      
+      // Annual projections
+      document.getElementById('annualRevenue').textContent = `$${(totalRevenue * 12).toFixed(0)}`;
+      document.getElementById('annualCosts').textContent = `$${(totalCosts * 12).toFixed(0)}`;
+      document.getElementById('annualProfit').textContent = `$${(netProfit * 12).toFixed(0)}`;
+      document.getElementById('annualProfit').className = netProfit >= 0 ? 'metric-value positive' : 'metric-value negative';
+      
+      // Break-even
+      document.getElementById('breakeven').textContent = `$${totalCosts.toFixed(0)}`;
+      
+      // Update breakdown table
+      updateBreakdownTable(actualAzureCost, toolCosts, expenseCosts);
+      
+      // Update recommendations
+      updateRecommendations(totalRevenue, totalCosts, netProfit, profitMargin);
+    }
+    
+    // Update Breakdown Table
+    function updateBreakdownTable(azureCost, toolCosts, expenseCosts) {
+      const totalCosts = azureCost + toolCosts + expenseCosts;
+      const tbody = document.getElementById('breakdownTable');
+      
+      const categories = [
+        { name: 'Azure Infrastructure', cost: azureCost, count: azureCost > 0 ? 1 : 0 },
+        { name: 'Tools & Services', cost: toolCosts, count: tools.length },
+        { name: 'Other Expenses', cost: expenseCosts, count: expenses.length }
+      ];
+      
+      tbody.innerHTML = categories.map(cat => {
+        const percentage = totalCosts > 0 ? (cat.cost / totalCosts * 100) : 0;
+        return `
+          <tr>
+            <td style="color: #00d4ff;">${cat.name}</td>
+            <td>${cat.count} items</td>
+            <td style="color: #ef4444;">$${cat.cost.toFixed(2)}</td>
+            <td>${percentage.toFixed(1)}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // Update Recommendations
+    function updateRecommendations(revenue, costs, profit, margin) {
+      const recDiv = document.getElementById('recommendations');
+      let recommendations = [];
+      
+      if (revenue === 0) {
+        recommendations.push('📊 Add your revenue sources to see profitability analysis');
+      } else if (profit < 0) {
+        recommendations.push(`🚨 You're currently operating at a loss of $${Math.abs(profit).toFixed(2)}/month`);
+        recommendations.push(`💡 You need to increase revenue by $${Math.abs(profit).toFixed(2)} or reduce costs to break even`);
+      } else if (margin < 20) {
+        recommendations.push(`⚠️ Your profit margin is ${margin.toFixed(1)}% - consider ways to increase it`);
+        recommendations.push(`💡 Industry standard for SaaS is 20-40% profit margin`);
+      } else {
+        recommendations.push(`✅ Great job! You're profitable with a ${margin.toFixed(1)}% margin`);
+        recommendations.push(`🎯 Your annual profit projection is $${(profit * 12).toFixed(0)}`);
+      }
+      
+      // Cost optimization suggestions
+      if (costs > 0) {
+        const azurePercent = (azureCost / costs * 100);
+        if (azurePercent > 50) {
+          recommendations.push(`☁️ Azure costs are ${azurePercent.toFixed(0)}% of total - consider optimization`);
+        }
+      }
+      
+      recDiv.innerHTML = recommendations.map(r => `<div style="margin-bottom: 10px;">• ${r}</div>`).join('');
+    }
+    
+    // Save Data
+    function saveData() {
+      const data = {
+        projects,
+        tools,
+        expenses,
+        azureCost
+      };
+      localStorage.setItem('costCalculatorData', JSON.stringify(data));
+    }
+    
+    // Load Saved Data
+    function loadSavedData() {
+      const saved = localStorage.getItem('costCalculatorData');
+      if (saved) {
+        const data = JSON.parse(saved);
+        projects = data.projects || [];
+        // Don't overwrite tools from dashboard sync
+        if (tools.length === 0) {
+          tools = data.tools || [];
+        }
+        expenses = data.expenses || [];
+        
+        updateProjectsList();
+        updateToolsList();
+        updateExpensesList();
+      }
+    }
+    
+    // Export Data
+    function exportData() {
+      const data = {
+        date: new Date().toISOString(),
+        revenue: {
+          projects,
+          total: projects.reduce((sum, p) => sum + p.revenue, 0)
+        },
+        costs: {
+          azure: azureCost,
+          tools,
+          expenses,
+          total: azureCost + tools.reduce((sum, t) => sum + t.cost, 0) + expenses.reduce((sum, e) => sum + e.cost, 0)
+        },
+        profit: {
+          monthly: projects.reduce((sum, p) => sum + p.revenue, 0) - (azureCost + tools.reduce((sum, t) => sum + t.cost, 0) + expenses.reduce((sum, e) => sum + e.cost, 0)),
+          annual: (projects.reduce((sum, p) => sum + p.revenue, 0) - (azureCost + tools.reduce((sum, t) => sum + t.cost, 0) + expenses.reduce((sum, e) => sum + e.cost, 0))) * 12
+        }
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saxtech-pl-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      
+      showMessage('Data exported successfully!');
+    }
+    
+    // Clear All
+    function clearAll() {
+      if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        projects = [];
+        tools = [];
+        expenses = [];
+        azureCost = 0;
+        
+        document.getElementById('azureCost').value = '';
+        document.getElementById('azureOverride').value = '';
+        
+        updateProjectsList();
+        updateToolsList();
+        updateExpensesList();
+        calculateTotals();
+        
+        localStorage.removeItem('costCalculatorData');
+        showMessage('All data cleared!');
+      }
+    }
+    
+    // Show Message
+    function showMessage(msg) {
+      const status = document.getElementById('syncStatus');
+      status.textContent = msg;
+      status.style.display = 'block';
+      status.style.background = 'rgba(16, 185, 129, 0.1)';
+      status.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      status.style.color = '#10b981';
+      
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

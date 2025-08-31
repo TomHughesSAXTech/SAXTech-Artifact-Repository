@@ -1224,6 +1224,10 @@
                     <textarea class="form-textarea" id="projectDescription" placeholder="Provide project overview and objectives"></textarea>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Project URL</label>
+                    <input type="url" class="form-input" id="projectUrl" placeholder="https://example.com/project (Direct link to access project)">
+                </div>
+                <div class="form-group">
                     <label class="form-label">GitHub Repository</label>
                     <input type="url" class="form-input" id="githubUrl" placeholder="https://github.com/saxtech/...">
                 </div>
@@ -1323,6 +1327,10 @@
                     <textarea class="form-textarea" id="editProjectDescription" placeholder="Provide project overview and objectives"></textarea>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Project URL</label>
+                    <input type="url" class="form-input" id="editProjectUrl" placeholder="https://example.com/project (Direct link to access project)">
+                </div>
+                <div class="form-group">
                     <label class="form-label">GitHub Repository</label>
                     <input type="url" class="form-input" id="editGithubUrl" placeholder="https://github.com/saxtech/...">
                 </div>
@@ -1353,6 +1361,10 @@
                     <label class="form-label">Associated Resources (for cost tracking)</label>
                     <div class="resource-checkbox-grid" id="editResourceList">
                         <!-- Checkboxes will be dynamically loaded here -->
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0, 212, 255, 0.05); border: 1px solid var(--sax-border); border-radius: 8px;">
+                        <span style="font-size: 12px; color: var(--sax-text-dim);">Selected Resources Monthly Cost: </span>
+                        <span id="editSelectedCost" style="font-size: 14px; font-weight: 600; color: var(--sax-warning);">$0.00</span>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1505,6 +1517,7 @@
                         <div class="project-badge">${project.type}</div>
                     </div>
                     <div class="project-links">
+                        ${project.projectUrl ? `<a href="${project.projectUrl}" target="_blank" class="link-btn" style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.15)); border-color: var(--sax-primary);"><span>🚀</span> Open Project</a>` : ''}
                         <a href="#" class="link-btn" onclick="showProjectSummary('${project.id}'); return false;"><span>📄</span> Project Summary</a>
                         ${project.github ? `<a href="${project.github}" target="_blank" class="link-btn"><span>⚡</span> GitHub${project.githubData && project.githubData.openIssues > 0 ? ` (${project.githubData.openIssues} issues)` : ''}</a>` : ''}
                         ${project.frontend ? `<a href="${project.frontend}" target="_blank" class="link-btn"><span>🌐</span> Live Site</a>` : ''}
@@ -1633,6 +1646,7 @@
             document.getElementById('editProjectType').value = project.type || '';
             document.getElementById('editProjectStatus').value = project.status || '';
             document.getElementById('editProjectDescription').value = project.description || '';
+            document.getElementById('editProjectUrl').value = project.projectUrl || '';
             document.getElementById('editGithubUrl').value = project.github || '';
             document.getElementById('editFrontendUrl').value = project.frontend || '';
             document.getElementById('editMrrValue').value = project.mrr || 0;
@@ -1738,6 +1752,7 @@
                     type: document.getElementById('projectType').value,
                     status: document.getElementById('projectStatus').value,
                     description: document.getElementById('projectDescription').value || "New project pending description",
+                    projectUrl: document.getElementById('projectUrl').value,
                     github: document.getElementById('githubUrl').value,
                     frontend: document.getElementById('frontendUrl').value,
                     resourceGroup: document.getElementById('resourceGroup').value,
@@ -1803,6 +1818,7 @@
                 type: document.getElementById('editProjectType').value,
                 status: document.getElementById('editProjectStatus').value,
                 description: document.getElementById('editProjectDescription').value || "New project pending description",
+                projectUrl: document.getElementById('editProjectUrl').value,
                 github: document.getElementById('editGithubUrl').value,
                 frontend: document.getElementById('editFrontendUrl').value,
                 resourceGroup: document.getElementById('editResourceGroup').value,
@@ -1832,7 +1848,7 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const projectId = parseInt(document.getElementById('uploadProject').value);
+            const projectId = document.getElementById('uploadProject').value;  // Remove parseInt - project IDs are strings now
             const artifactType = document.getElementById('artifactType').value;
             const files = fileInput.files;
             
@@ -2052,6 +2068,19 @@
             }
         });
         
+        // Update selected resources cost
+        function updateSelectedResourcesCost() {
+            let totalCost = 0;
+            document.querySelectorAll('input[name="edit-resources"]:checked').forEach(checkbox => {
+                const cost = parseFloat(checkbox.getAttribute('data-cost')) || 0;
+                totalCost += cost;
+            });
+            const costElement = document.getElementById('editSelectedCost');
+            if (costElement) {
+                costElement.textContent = `$${totalCost.toFixed(2)}`;
+            }
+        }
+        
         // Logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
@@ -2151,15 +2180,25 @@
                 if (resources.length === 0) {
                     resourceListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--sax-text-dim);">No resources found in this resource group</div>';
                 } else {
+                    // Sort resources by cost (highest first)
+                    resources.sort((a, b) => (b.monthlyCost || 0) - (a.monthlyCost || 0));
+                    
                     resources.forEach((resource, index) => {
                         const checkboxItem = document.createElement('div');
                         checkboxItem.className = 'resource-checkbox-item';
+                        const costDisplay = resource.monthlyCost > 0 ? 
+                            `<span style="font-size: 10px; color: var(--sax-warning); margin-left: auto;">${resource.monthlyCostFormatted}/mo</span>` : '';
                         checkboxItem.innerHTML = `
-                            <input type="checkbox" id="edit-resource-${index}" name="edit-resources" value="${resource.id}" data-name="${resource.name}">
+                            <input type="checkbox" id="edit-resource-${index}" name="edit-resources" value="${resource.id}" data-name="${resource.name}" data-cost="${resource.monthlyCost || 0}">
                             <label class="resource-checkbox-label" for="edit-resource-${index}">${resource.name}</label>
                             <span class="resource-type-badge">${resource.type}</span>
+                            ${costDisplay}
                         `;
                         resourceListDiv.appendChild(checkboxItem);
+                        
+                        // Add event listener to update total cost
+                        const checkbox = checkboxItem.querySelector('input[type="checkbox"]');
+                        checkbox.addEventListener('change', updateSelectedResourcesCost);
                     });
                 }
             } else {

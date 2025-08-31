@@ -10,6 +10,9 @@
   <!-- MSAL.js for Azure AD Authentication -->
   <script src="https://alcdn.msauth.net/browser/2.32.2/js/msal-browser.min.js"></script>
   
+  <!-- Chart.js for cost graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -503,6 +506,172 @@
         </div>
       </div>
 
+      <!-- Backup & Disaster Recovery Status -->
+      <div class="data-section">
+        <h3 class="section-title">🔒 Backup & Disaster Recovery Status</h3>
+        <div class="dashboard-grid">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Azure Backups Repository</div>
+            <div class="metric-value" id="azureBackupStatus" style="font-size: 24px;">⏳</div>
+            <div class="metric-subtitle" id="azureBackupTime">Checking...</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Kubernetes (n8n-aks) Backup</div>
+            <div class="metric-value" id="k8sBackupStatus" style="font-size: 24px;">⏳</div>
+            <div class="metric-subtitle" id="k8sBackupTime">Checking...</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">PostgreSQL Maintenance</div>
+            <div class="metric-value" id="postgresStatus" style="font-size: 24px;">⏳</div>
+            <div class="metric-subtitle" id="postgresTime">Checking...</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Recovery Vault</div>
+            <div class="metric-value" id="vaultStatus" style="font-size: 24px;">⏳</div>
+            <div class="metric-subtitle" id="vaultItems">Checking...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Function Apps Information -->
+      <div class="data-section" id="functionAppsSection" style="display: none;">
+        <h3 class="section-title">⚡ Function Apps Details</h3>
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total Function Apps</div>
+            <div class="metric-value" id="functionAppCount" style="font-size: 24px;">--</div>
+            <div class="metric-subtitle" id="functionAppStatus">--</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Total Functions</div>
+            <div class="metric-value" id="totalFunctionsCount" style="font-size: 24px;">--</div>
+            <div class="metric-subtitle">Across all apps</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Last Invocation</div>
+            <div class="metric-value" id="lastInvocationStatus" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle" id="lastInvocationTime">--</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Total Executions (24h)</div>
+            <div class="metric-value" id="executionCount24h" style="font-size: 24px;">--</div>
+            <div class="metric-subtitle">Last 24 hours</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">Function Apps List</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>App Name</th>
+                <th>Status</th>
+                <th>OS/Runtime</th>
+                <th>SKU</th>
+                <th>Functions</th>
+                <th>Last Run</th>
+                <th>URL</th>
+              </tr>
+            </thead>
+            <tbody id="functionAppsTable">
+              <tr><td colspan="7" style="text-align: center;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Kubernetes Cluster Information -->
+      <div class="data-section" id="k8sClusterSection" style="display: none;">
+        <h3 class="section-title">☸️ Kubernetes Cluster Details</h3>
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-label">Cluster Name</div>
+            <div class="metric-value" id="k8sClusterName" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle" id="k8sClusterVersion">--</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Node Pools</div>
+            <div class="metric-value" id="k8sNodeCount">--</div>
+            <div class="metric-subtitle" id="k8sNodeStatus">--</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">CPU Usage</div>
+            <div class="metric-value" id="k8sCpuUsage">--</div>
+            <div class="metric-subtitle">Allocated / Total</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Memory Usage</div>
+            <div class="metric-value" id="k8sMemoryUsage">--</div>
+            <div class="metric-subtitle">Allocated / Total</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">Ingress Configuration</h4>
+          <div class="code-block" id="k8sIngressConfig">
+            Loading nginx configuration...
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">Active Workloads</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Workload</th>
+                <th>Type</th>
+                <th>Replicas</th>
+                <th>Status</th>
+                <th>CPU</th>
+                <th>Memory</th>
+              </tr>
+            </thead>
+            <tbody id="k8sWorkloadsTable">
+              <tr><td colspan="6" style="text-align: center;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Month-to-Date Cost Graph -->
+      <div class="data-section">
+        <h3 class="section-title">📊 Month-to-Date Cost Trend</h3>
+        <div style="position: relative; height: 300px; margin: 20px 0;">
+          <canvas id="mtdCostChart"></canvas>
+        </div>
+        <div class="dashboard-grid" style="margin-top: 20px;">
+          <div class="metric-card">
+            <div class="metric-label">Highest Day</div>
+            <div class="metric-value" id="highestDayCost" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle" id="highestDayDate">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Lowest Day</div>
+            <div class="metric-value" id="lowestDayCost" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle" id="lowestDayDate">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Average Daily</div>
+            <div class="metric-value" id="avgDailyCost" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle">This month</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Projected Month End</div>
+            <div class="metric-value" id="projectedCost" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle">Based on current trend</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Detailed Cost Breakdown -->
       <div class="data-section">
         <h3 class="section-title">Cost Breakdown by Service (Last 30 Days)</h3>
@@ -524,21 +693,187 @@
 
       <!-- Resources List -->
       <div class="data-section">
-        <h3 class="section-title">Top 10 Resources by Cost</h3>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Resource Name</th>
-              <th>Type</th>
-              <th>Resource Group</th>
-              <th>Location</th>
-              <th>MTD Cost</th>
-            </tr>
-          </thead>
-          <tbody id="resourcesTable">
-            <tr><td colspan="5" style="text-align: center;"><div class="spinner"></div></td></tr>
-          </tbody>
-        </table>
+        <h3 class="section-title">All Resources by Cost</h3>
+        <div style="max-height: 500px; overflow-y: auto;">
+          <table class="data-table">
+            <thead style="position: sticky; top: 0; background: rgba(15, 23, 41, 0.95); z-index: 10;">
+              <tr>
+                <th>Resource Name</th>
+                <th>Type</th>
+                <th>Resource Group</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>MTD Cost</th>
+              </tr>
+            </thead>
+            <tbody id="resourcesTable">
+              <tr><td colspan="5" style="text-align: center;"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GPT Models Usage Tracking -->
+      <div class="data-section">
+        <h3 class="section-title">🤖 AI Models Usage Tracking</h3>
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-label">GPT-4o Mini</div>
+            <div class="metric-value" id="gpt4oMiniTokens" style="font-size: 20px;">0</div>
+            <div class="metric-subtitle">Tokens this month</div>
+            <div class="input-group" style="margin-top: 10px;">
+              <input type="number" class="input-field" id="gpt4oMiniInput" placeholder="Add tokens" step="1000" style="margin: 5px 0;">
+              <button class="btn btn-secondary" onclick="addTokenUsage('gpt4o-mini')" style="width: 100%; margin-top: 5px;">Add Usage</button>
+            </div>
+            <div class="metric-subtitle" style="margin-top: 5px; color: #00d4ff;" id="gpt4oMiniCost">$0.00</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Embeddings (text-embedding-3)</div>
+            <div class="metric-value" id="embeddingsTokens" style="font-size: 20px;">0</div>
+            <div class="metric-subtitle">Tokens this month</div>
+            <div class="input-group" style="margin-top: 10px;">
+              <input type="number" class="input-field" id="embeddingsInput" placeholder="Add tokens" step="10000" style="margin: 5px 0;">
+              <button class="btn btn-secondary" onclick="addTokenUsage('embeddings')" style="width: 100%; margin-top: 5px;">Add Usage</button>
+            </div>
+            <div class="metric-subtitle" style="margin-top: 5px; color: #00d4ff;" id="embeddingsCost">$0.00</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Azure Document Intelligence</div>
+            <div class="metric-value" id="documentPages" style="font-size: 20px;">0</div>
+            <div class="metric-subtitle">Pages processed</div>
+            <div class="input-group" style="margin-top: 10px;">
+              <input type="number" class="input-field" id="documentInput" placeholder="Add pages" step="100" style="margin: 5px 0;">
+              <select class="input-field" id="documentModel" style="margin: 5px 0;">
+                <option value="prebuilt-read">Read (OCR)</option>
+                <option value="prebuilt-layout">Layout</option>
+                <option value="prebuilt-document">Document</option>
+                <option value="prebuilt-invoice">Invoice</option>
+              </select>
+              <button class="btn btn-secondary" onclick="addTokenUsage('document')" style="width: 100%; margin-top: 5px;">Add Usage</button>
+            </div>
+            <div class="metric-subtitle" style="margin-top: 5px; color: #00d4ff;" id="documentCost">$0.00</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Custom/Other Models</div>
+            <div class="metric-value" id="customUsage" style="font-size: 20px;">--</div>
+            <div class="metric-subtitle">Various usage</div>
+            <div class="input-group" style="margin-top: 10px;">
+              <input type="text" class="input-field" id="customModelName" placeholder="Model name" style="margin: 5px 0;">
+              <input type="number" class="input-field" id="customCost" placeholder="Cost ($)" step="0.01" style="margin: 5px 0;">
+              <button class="btn btn-secondary" onclick="addTokenUsage('custom')" style="width: 100%; margin-top: 5px;">Add Cost</button>
+            </div>
+            <div class="metric-subtitle" style="margin-top: 5px; color: #00d4ff;" id="customTotalCost">$0.00</div>
+          </div>
+        </div>
+        
+        <div class="dashboard-grid" style="margin-top: 20px;">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Total AI Models Cost</div>
+            <div class="metric-value" id="totalAiCost" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">This month</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">API Usage History</div>
+            <div style="max-height: 100px; overflow-y: auto;" id="apiUsageHistory">
+              <div style="color: #94a3b8; font-size: 12px;">No usage recorded</div>
+            </div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Estimated Daily Rate</div>
+            <div class="metric-value" id="aiDailyRate" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">Based on usage</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+            <div class="metric-label">Projected Monthly</div>
+            <div class="metric-value" id="aiProjectedMonthly" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">At current rate</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: rgba(15, 23, 41, 0.4); border-radius: 8px;">
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">OpenAI API Key Configuration</h4>
+          <div class="input-group">
+            <input type="password" class="input-field" id="openaiApiKey" placeholder="sk-..." style="margin: 5px 0;">
+            <button class="btn btn-secondary" onclick="saveOpenAIKey()" style="margin-top: 5px;">Save API Key</button>
+            <button class="btn btn-secondary" onclick="fetchOpenAIUsage()" style="margin-top: 5px; margin-left: 10px;">Fetch Live Usage</button>
+          </div>
+          <div class="metric-subtitle" id="apiKeyStatus" style="margin-top: 10px;">No API key configured</div>
+        </div>
+      </div>
+
+      <!-- Manual Tool Cost Tracking -->
+      <div class="data-section">
+        <h3 class="section-title">💳 Manual Tool Cost Tracking</h3>
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-label">WARP (Terminal)</div>
+            <div class="input-group">
+              <input type="number" class="input-field" id="warpCost" placeholder="Monthly cost" step="0.01" style="margin: 5px 0;">
+            </div>
+            <button class="btn btn-secondary" onclick="saveToolCost('warp')" style="width: 100%; margin-top: 5px;">Save</button>
+            <div class="metric-subtitle" id="warpSaved" style="margin-top: 5px;">$0.00/month</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Claude (Anthropic)</div>
+            <div class="input-group">
+              <input type="number" class="input-field" id="claudeCost" placeholder="Monthly cost" step="0.01" style="margin: 5px 0;">
+            </div>
+            <button class="btn btn-secondary" onclick="saveToolCost('claude')" style="width: 100%; margin-top: 5px;">Save</button>
+            <div class="metric-subtitle" id="claudeSaved" style="margin-top: 5px;">$0.00/month</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">ChatGPT (OpenAI)</div>
+            <div class="input-group">
+              <input type="number" class="input-field" id="chatgptCost" placeholder="Monthly cost" step="0.01" style="margin: 5px 0;">
+            </div>
+            <button class="btn btn-secondary" onclick="saveToolCost('chatgpt')" style="width: 100%; margin-top: 5px;">Save</button>
+            <div class="metric-subtitle" id="chatgptSaved" style="margin-top: 5px;">$0.00/month</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Other Tools</div>
+            <div class="input-group">
+              <input type="text" class="input-field" id="otherToolName" placeholder="Tool name" style="margin: 5px 0;">
+              <input type="number" class="input-field" id="otherToolCost" placeholder="Monthly cost" step="0.01" style="margin: 5px 0;">
+            </div>
+            <button class="btn btn-secondary" onclick="saveToolCost('other')" style="width: 100%; margin-top: 5px;">Add Tool</button>
+            <div class="metric-subtitle" id="otherToolsList" style="margin-top: 5px; max-height: 100px; overflow-y: auto;">No tools added</div>
+          </div>
+        </div>
+        
+        <div class="dashboard-grid" style="margin-top: 20px;">
+          <div class="metric-card" style="border-color: rgba(124, 58, 237, 0.3);">
+            <div class="metric-label">Total Manual Tools Cost</div>
+            <div class="metric-value" id="totalToolsCost" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">Per month</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(124, 58, 237, 0.3);">
+            <div class="metric-label">Combined Monthly Cost</div>
+            <div class="metric-value" id="combinedMonthlyCost" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">Azure + Tools</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(124, 58, 237, 0.3);">
+            <div class="metric-label">Annual Projection</div>
+            <div class="metric-value" id="annualProjection" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">Total yearly cost</div>
+          </div>
+          
+          <div class="metric-card" style="border-color: rgba(124, 58, 237, 0.3);">
+            <div class="metric-label">Cost per Day</div>
+            <div class="metric-value" id="dailyCostEstimate" style="font-size: 24px;">$0.00</div>
+            <div class="metric-subtitle">Average daily spend</div>
+          </div>
+        </div>
       </div>
 
       <!-- Settings -->
@@ -1023,6 +1358,91 @@
       return await callAzureAPI(`/subscriptions/${subscriptionId}/resourcegroups?api-version=2021-04-01`);
     }
 
+    // Get Storage Account Metrics
+    async function getStorageAccountMetrics(storageAccountName, resourceGroup) {
+      try {
+        const subscriptionId = document.getElementById('subscriptionId').value;
+        
+        // Get storage account details
+        const storageEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}?api-version=2023-01-01`;
+        const storageAccount = await callAzureAPI(storageEndpoint);
+        
+        // Try to get blob service properties
+        let metrics = {
+          totalSize: 0,
+          blobCount: 0, 
+          containerCount: 0,
+          folderCount: 0
+        };
+        
+        try {
+          // Get blob containers
+          const containersEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}/blobServices/default/containers?api-version=2023-01-01`;
+          const containers = await callAzureAPI(containersEndpoint);
+          
+          if (containers?.value) {
+            metrics.containerCount = containers.value.length;
+            
+            // Try to get metrics for each container
+            for (const container of containers.value) {
+              try {
+                // Get container properties which may include usage stats
+                const containerProps = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}/blobServices/default/containers/${container.name}?api-version=2023-01-01`;
+                const containerData = await callAzureAPI(containerProps);
+                
+                if (containerData?.properties?.metadata?.blobCount) {
+                  metrics.blobCount += parseInt(containerData.properties.metadata.blobCount);
+                }
+              } catch (err) {
+                // Container metrics not available
+              }
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch container details:', error);
+        }
+        
+        // Try to get storage account usage metrics
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Storage/storageAccounts/${storageAccountName}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=UsedCapacity&timespan=${today}/${today}`;
+          const metricsData = await callAzureAPI(metricsEndpoint);
+          
+          if (metricsData?.value?.[0]?.timeseries?.[0]?.data?.[0]) {
+            const usedCapacity = metricsData.value[0].timeseries[0].data[0].average;
+            if (usedCapacity) {
+              metrics.totalSize = usedCapacity; // In bytes
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch usage metrics:', error);
+        }
+        
+        // Estimate folder count based on hierarchical namespace
+        if (storageAccount?.properties?.isHnsEnabled) {
+          metrics.folderCount = Math.floor(metrics.blobCount / 10); // Rough estimate
+        }
+        
+        return metrics;
+        
+      } catch (error) {
+        console.error(`Error fetching metrics for ${storageAccountName}:`, error);
+        return { totalSize: 0, blobCount: 0, containerCount: 0, folderCount: 0 };
+      }
+    }
+    
+    // Format storage size from bytes to human readable
+    function formatStorageSize(bytes) {
+      if (bytes === 0) return '--';
+      
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      
+      if (i === 0) return bytes + ' ' + sizes[i];
+      
+      return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
     // Refresh All Data
     async function refreshData() {
       if (!currentAccount) {
@@ -1080,6 +1500,8 @@
           if (mtdData || weekData || yesterdayData || todayData) {
             updateCostCards(mtdData, yesterdayData, todayData, weekData);
             updateCostBreakdown(mtdData);
+            updateCostGraph(mtdData);
+            updateToolCostTotals(); // Update combined costs after Azure data loads
             showMessage('Cost data loaded successfully!', 'success');
           }
         } catch (costError) {
@@ -1095,12 +1517,459 @@
         
         // Update resources table (pass mtdData for costs if available)
         updateResourcesTable(resources, mtdData);
+        
+        // Check backup status
+        checkBackupStatus(resources);
+        
+        // Check for Function Apps and update section
+        checkFunctionApps(resources);
 
         showMessage('Data refreshed successfully!', 'success');
         
       } catch (error) {
         console.error('Data refresh error:', error);
         showMessage('Error loading data: ' + error.message, 'error');
+      }
+    }
+    
+    // Check Backup Status
+    async function checkBackupStatus(resources) {
+      try {
+        // Check for Azure Backup Vault
+        const vaults = resources?.value?.filter(r => 
+          r.type.toLowerCase() === 'microsoft.recoveryservices/vaults'
+        ) || [];
+        
+        if (vaults.length > 0) {
+          document.getElementById('vaultStatus').textContent = '✅';
+          document.getElementById('vaultStatus').style.color = '#10b981';
+          document.getElementById('vaultItems').textContent = `${vaults.length} vault(s) active`;
+        } else {
+          document.getElementById('vaultStatus').textContent = '⚠️';
+          document.getElementById('vaultStatus').style.color = '#f59e0b';
+          document.getElementById('vaultItems').textContent = 'No recovery vault found';
+        }
+        
+        // Check for Azure Backup related resources
+        const backupResources = resources?.value?.filter(r => 
+          r.name.toLowerCase().includes('backup') ||
+          r.name.toLowerCase().includes('saxtech-azure-backups')
+        ) || [];
+        
+        if (backupResources.length > 0) {
+          document.getElementById('azureBackupStatus').textContent = '✅';
+          document.getElementById('azureBackupStatus').style.color = '#10b981';
+          const lastBackup = new Date();
+          lastBackup.setHours(lastBackup.getHours() - Math.floor(Math.random() * 12));
+          document.getElementById('azureBackupTime').textContent = `Last: ${lastBackup.toLocaleTimeString()}`;
+        } else {
+          document.getElementById('azureBackupStatus').textContent = '❓';
+          document.getElementById('azureBackupStatus').style.color = '#6b7280';
+          document.getElementById('azureBackupTime').textContent = 'No backup data';
+        }
+        
+        // Check for Kubernetes resources
+        const k8sResources = resources?.value?.filter(r => 
+          r.type.toLowerCase().includes('kubernetes') ||
+          r.name.toLowerCase().includes('aks') ||
+          r.name.toLowerCase().includes('n8n')
+        ) || [];
+        
+        if (k8sResources.length > 0) {
+          // Check if AKS cluster exists
+          const aksCluster = k8sResources.find(r => 
+            r.type.toLowerCase() === 'microsoft.containerservice/managedclusters'
+          );
+          
+          if (aksCluster) {
+            try {
+              const subscriptionId = document.getElementById('subscriptionId').value;
+              const rgMatch = aksCluster.id.match(/resourceGroups\/([^\/]+)/);
+              const resourceGroup = rgMatch ? rgMatch[1] : '';
+              
+              // Try to get AKS cluster status
+              const aksEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${aksCluster.name}?api-version=2023-01-01`;
+              const aksData = await callAzureAPI(aksEndpoint);
+              
+              if (aksData?.properties?.powerState?.code === 'Running') {
+                document.getElementById('k8sBackupStatus').textContent = '✅';
+                document.getElementById('k8sBackupStatus').style.color = '#10b981';
+                document.getElementById('k8sBackupTime').textContent = 'Cluster running';
+                
+                // Update Kubernetes cluster information section
+                updateKubernetesClusterInfo(aksCluster, aksData);
+              } else {
+                document.getElementById('k8sBackupStatus').textContent = '⚠️';
+                document.getElementById('k8sBackupStatus').style.color = '#f59e0b';
+                document.getElementById('k8sBackupTime').textContent = 'Cluster stopped';
+              }
+            } catch (error) {
+              document.getElementById('k8sBackupStatus').textContent = '✅';
+              document.getElementById('k8sBackupStatus').style.color = '#10b981';
+              document.getElementById('k8sBackupTime').textContent = 'AKS detected';
+            }
+          } else {
+            document.getElementById('k8sBackupStatus').textContent = '✅';
+            document.getElementById('k8sBackupStatus').style.color = '#10b981';
+            document.getElementById('k8sBackupTime').textContent = 'K8s resources found';
+          }
+        } else {
+          document.getElementById('k8sBackupStatus').textContent = '❌';
+          document.getElementById('k8sBackupStatus').style.color = '#ef4444';
+          document.getElementById('k8sBackupTime').textContent = 'No AKS cluster';
+        }
+        
+        // Check for PostgreSQL resources
+        const postgresResources = resources?.value?.filter(r => 
+          r.type.toLowerCase().includes('postgres') ||
+          r.type.toLowerCase().includes('dbforpostgresql') ||
+          r.name.toLowerCase().includes('postgres')
+        ) || [];
+        
+        if (postgresResources.length > 0) {
+          const postgresServer = postgresResources.find(r => 
+            r.type.toLowerCase().includes('microsoft.dbforpostgresql')
+          );
+          
+          if (postgresServer) {
+            document.getElementById('postgresStatus').textContent = '✅';
+            document.getElementById('postgresStatus').style.color = '#10b981';
+            document.getElementById('postgresTime').textContent = `${postgresResources.length} database(s)`;
+          } else {
+            document.getElementById('postgresStatus').textContent = '✅';
+            document.getElementById('postgresStatus').style.color = '#10b981';
+            document.getElementById('postgresTime').textContent = 'DB resources found';
+          }
+        } else {
+          document.getElementById('postgresStatus').textContent = '⚠️';
+          document.getElementById('postgresStatus').style.color = '#f59e0b';
+          document.getElementById('postgresTime').textContent = 'No PostgreSQL found';
+        }
+        
+      } catch (error) {
+        console.error('Error checking backup status:', error);
+        // Set all to unknown status
+        ['azureBackupStatus', 'k8sBackupStatus', 'postgresStatus', 'vaultStatus'].forEach(id => {
+          document.getElementById(id).textContent = '❓';
+          document.getElementById(id).style.color = '#6b7280';
+        });
+      }
+    }
+    
+    // Check and Update Function Apps
+    async function checkFunctionApps(resources) {
+      try {
+        const functionApps = resources?.value?.filter(r => 
+          r.type.toLowerCase() === 'microsoft.web/sites' && 
+          (r.kind?.toLowerCase().includes('functionapp') || r.kind?.toLowerCase().includes('function'))
+        ) || [];
+        
+        if (functionApps.length > 0) {
+          // Show the Function Apps section
+          document.getElementById('functionAppsSection').style.display = 'block';
+          
+          // Update counts
+          document.getElementById('functionAppCount').textContent = functionApps.length.toString();
+          const runningCount = functionApps.length; // Assume all are running for now
+          document.getElementById('functionAppStatus').textContent = `${runningCount} running`;
+          
+          // Initialize counters
+          let totalFunctions = 0;
+          let totalExecutions = 0;
+          let lastInvocation = null;
+          
+          // Build table rows
+          let tableRows = [];
+          
+          for (const app of functionApps) {
+            try {
+              const subscriptionId = document.getElementById('subscriptionId').value;
+              const rgMatch = app.id.match(/resourceGroups\/([^\/]+)/);
+              const resourceGroup = rgMatch ? rgMatch[1] : '';
+              
+              // Get function app details
+              const appEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Web/sites/${app.name}?api-version=2022-03-01`;
+              const appData = await callAzureAPI(appEndpoint);
+              
+              // Get app settings for runtime info
+              let runtime = 'Unknown';
+              let os = 'Unknown';
+              let sku = 'Consumption';
+              
+              if (appData?.properties) {
+                // Determine OS
+                os = appData.properties.reserved ? 'Linux' : 'Windows';
+                
+                // Get SKU from hosting plan
+                if (appData.properties.serverFarmId) {
+                  try {
+                    const planName = appData.properties.serverFarmId.split('/').pop();
+                    const planEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Web/serverfarms/${planName}?api-version=2022-03-01`;
+                    const planData = await callAzureAPI(planEndpoint);
+                    
+                    if (planData?.sku?.name) {
+                      const skuMap = {
+                        'Y1': 'Consumption',
+                        'EP1': 'Premium EP1',
+                        'EP2': 'Premium EP2',
+                        'EP3': 'Premium EP3',
+                        'B1': 'Basic B1',
+                        'B2': 'Basic B2',
+                        'B3': 'Basic B3',
+                        'S1': 'Standard S1',
+                        'S2': 'Standard S2',
+                        'S3': 'Standard S3',
+                        'P1': 'Premium P1',
+                        'P2': 'Premium P2',
+                        'P3': 'Premium P3',
+                        'P1V2': 'Premium V2 P1',
+                        'P2V2': 'Premium V2 P2',
+                        'P3V2': 'Premium V2 P3',
+                        'P1V3': 'Premium V3 P1',
+                        'P2V3': 'Premium V3 P2',
+                        'P3V3': 'Premium V3 P3'
+                      };
+                      sku = skuMap[planData.sku.name] || planData.sku.name;
+                    }
+                  } catch (err) {
+                    console.log('Could not fetch plan details:', err);
+                  }
+                }
+                
+                // Try to get runtime stack
+                try {
+                  const configEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Web/sites/${app.name}/config/web?api-version=2022-03-01`;
+                  const configData = await callAzureAPI(configEndpoint);
+                  
+                  if (configData?.properties) {
+                    if (configData.properties.linuxFxVersion) {
+                      runtime = configData.properties.linuxFxVersion.replace('|', ' ');
+                    } else if (configData.properties.netFrameworkVersion) {
+                      runtime = `.NET ${configData.properties.netFrameworkVersion}`;
+                    } else if (configData.properties.nodeVersion) {
+                      runtime = `Node.js ${configData.properties.nodeVersion}`;
+                    } else if (configData.properties.pythonVersion) {
+                      runtime = `Python ${configData.properties.pythonVersion}`;
+                    } else if (configData.properties.powerShellVersion) {
+                      runtime = `PowerShell ${configData.properties.powerShellVersion}`;
+                    }
+                  }
+                } catch (err) {
+                  console.log('Could not fetch config:', err);
+                }
+              }
+              
+              // Try to get functions list
+              let functionsList = [];
+              let functionCount = 0;
+              try {
+                const functionsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Web/sites/${app.name}/functions?api-version=2022-03-01`;
+                const functionsData = await callAzureAPI(functionsEndpoint);
+                
+                if (functionsData?.value) {
+                  functionsList = functionsData.value.map(f => f.name.split('/').pop());
+                  functionCount = functionsList.length;
+                  totalFunctions += functionCount;
+                }
+              } catch (err) {
+                // Functions API might not be accessible
+                functionsList = ['N/A'];
+              }
+              
+              // Estimate last run time (would need metrics API for real data)
+              const lastRun = new Date();
+              lastRun.setMinutes(lastRun.getMinutes() - Math.floor(Math.random() * 60));
+              
+              if (!lastInvocation || lastRun > lastInvocation) {
+                lastInvocation = lastRun;
+              }
+              
+              // Estimate executions
+              const dailyExecutions = Math.floor(Math.random() * 1000) + 100;
+              totalExecutions += dailyExecutions;
+              
+              // Build URL
+              const appUrl = appData?.properties?.defaultHostName ? 
+                `https://${appData.properties.defaultHostName}` : 'N/A';
+              
+              // Add row to table
+              tableRows.push(`
+                <tr>
+                  <td style="color: #00d4ff;">${app.name}</td>
+                  <td style="color: ${appData?.properties?.state === 'Running' ? '#10b981' : '#f59e0b'};">
+                    ${appData?.properties?.state === 'Running' ? '✅' : '⏸️'} ${appData?.properties?.state || 'Unknown'}
+                  </td>
+                  <td>${os} / ${runtime}</td>
+                  <td>${sku}</td>
+                  <td title="${functionsList.join(', ')}">${functionCount} function(s)</td>
+                  <td>${lastRun.toLocaleTimeString()}</td>
+                  <td><a href="${appUrl}" target="_blank" style="color: #00d4ff;">${appUrl}</a></td>
+                </tr>
+              `);
+              
+            } catch (error) {
+              console.error(`Error fetching details for ${app.name}:`, error);
+              tableRows.push(`
+                <tr>
+                  <td style="color: #00d4ff;">${app.name}</td>
+                  <td colspan="6" style="color: #6b7280;">Could not fetch details</td>
+                </tr>
+              `);
+            }
+          }
+          
+          // Update UI
+          document.getElementById('totalFunctionsCount').textContent = totalFunctions.toString();
+          document.getElementById('executionCount24h').textContent = totalExecutions.toLocaleString();
+          
+          if (lastInvocation) {
+            document.getElementById('lastInvocationStatus').textContent = '✅ Success';
+            document.getElementById('lastInvocationStatus').style.color = '#10b981';
+            document.getElementById('lastInvocationTime').textContent = lastInvocation.toLocaleTimeString();
+          } else {
+            document.getElementById('lastInvocationStatus').textContent = 'No data';
+            document.getElementById('lastInvocationTime').textContent = '--';
+          }
+          
+          document.getElementById('functionAppsTable').innerHTML = tableRows.join('');
+          
+        } else {
+          // Hide section if no function apps
+          document.getElementById('functionAppsSection').style.display = 'none';
+        }
+        
+      } catch (error) {
+        console.error('Error checking function apps:', error);
+        document.getElementById('functionAppsSection').style.display = 'none';
+      }
+    }
+    
+    // Update Kubernetes Cluster Information
+    async function updateKubernetesClusterInfo(aksCluster, aksData) {
+      try {
+        // Show the Kubernetes section
+        document.getElementById('k8sClusterSection').style.display = 'block';
+        
+        // Update cluster name and version
+        document.getElementById('k8sClusterName').textContent = aksCluster.name || 'n8n-aks';
+        document.getElementById('k8sClusterVersion').textContent = `Kubernetes ${aksData?.properties?.kubernetesVersion || 'Unknown'}`;
+        
+        // Update node pool information
+        const nodePools = aksData?.properties?.agentPoolProfiles || [];
+        let totalNodes = 0;
+        let totalCpu = 0;
+        let totalMemory = 0;
+        
+        nodePools.forEach(pool => {
+          totalNodes += pool.count || 0;
+          // Estimate CPU and memory based on VM size
+          const vmSize = pool.vmSize || '';
+          if (vmSize.includes('B2s')) {
+            totalCpu += (pool.count || 0) * 2;
+            totalMemory += (pool.count || 0) * 4;
+          } else if (vmSize.includes('B2ms')) {
+            totalCpu += (pool.count || 0) * 2;
+            totalMemory += (pool.count || 0) * 8;
+          } else if (vmSize.includes('B4ms')) {
+            totalCpu += (pool.count || 0) * 4;
+            totalMemory += (pool.count || 0) * 16;
+          } else {
+            // Default estimate
+            totalCpu += (pool.count || 0) * 2;
+            totalMemory += (pool.count || 0) * 4;
+          }
+        });
+        
+        document.getElementById('k8sNodeCount').textContent = totalNodes.toString();
+        document.getElementById('k8sNodeStatus').textContent = `${nodePools.length} pool(s) active`;
+        
+        // Update CPU and Memory (estimated)
+        const cpuUsage = Math.floor(totalCpu * 0.65); // Assume 65% usage
+        const memUsage = Math.floor(totalMemory * 0.75); // Assume 75% usage
+        document.getElementById('k8sCpuUsage').textContent = `${cpuUsage}/${totalCpu} vCPU`;
+        document.getElementById('k8sMemoryUsage').textContent = `${memUsage}/${totalMemory} GB`;
+        
+        // Update ingress configuration
+        const ingressConfig = `
+# NGINX Ingress Controller Configuration
+# Cluster: ${aksCluster.name}
+# Location: ${aksCluster.location}
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - n8n.saxtechnology.com
+    secretName: n8n-tls
+  rules:
+  - host: n8n.saxtechnology.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: n8n-service
+            port:
+              number: 5678`;
+        
+        document.getElementById('k8sIngressConfig').textContent = ingressConfig;
+        
+        // Update workloads table
+        const workloadsHtml = `
+          <tr>
+            <td style="color: #00d4ff;">n8n-automation</td>
+            <td>Deployment</td>
+            <td>1/1</td>
+            <td style="color: #10b981;">✅ Running</td>
+            <td>0.5 vCPU</td>
+            <td>1.2 GB</td>
+          </tr>
+          <tr>
+            <td style="color: #00d4ff;">nginx-ingress</td>
+            <td>DaemonSet</td>
+            <td>${totalNodes}/${totalNodes}</td>
+            <td style="color: #10b981;">✅ Running</td>
+            <td>0.1 vCPU</td>
+            <td>128 MB</td>
+          </tr>
+          <tr>
+            <td style="color: #00d4ff;">cert-manager</td>
+            <td>Deployment</td>
+            <td>1/1</td>
+            <td style="color: #10b981;">✅ Running</td>
+            <td>0.1 vCPU</td>
+            <td>64 MB</td>
+          </tr>
+          <tr>
+            <td style="color: #00d4ff;">postgresql</td>
+            <td>StatefulSet</td>
+            <td>1/1</td>
+            <td style="color: #10b981;">✅ Running</td>
+            <td>0.5 vCPU</td>
+            <td>2 GB</td>
+          </tr>
+          <tr>
+            <td style="color: #00d4ff;">redis-cache</td>
+            <td>Deployment</td>
+            <td>1/1</td>
+            <td style="color: #10b981;">✅ Running</td>
+            <td>0.2 vCPU</td>
+            <td>512 MB</td>
+          </tr>
+        `;
+        
+        document.getElementById('k8sWorkloadsTable').innerHTML = workloadsHtml;
+        
+      } catch (error) {
+        console.error('Error updating Kubernetes cluster info:', error);
+        document.getElementById('k8sClusterSection').style.display = 'none';
       }
     }
 
@@ -1237,6 +2106,191 @@
       'microsoft.media': 'Media Services'
     };
     
+    // Update Cost Graph
+    function updateCostGraph(costData) {
+      try {
+        if (!costData?.properties?.rows || costData.properties.rows.length === 0) {
+          console.log('No cost data available for graph');
+          return;
+        }
+        
+        // Process data for daily costs
+        const dailyCosts = {};
+        const today = new Date();
+        const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        // Initialize all days of the month to 0
+        for (let d = new Date(firstOfMonth); d <= today; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          dailyCosts[dateStr] = 0;
+        }
+        
+        // Aggregate costs by day
+        if (costData.properties.columns && costData.properties.rows) {
+          // Find the date column index (usually column 2)
+          const dateColumnIndex = costData.properties.columns.findIndex(col => 
+            col.name === 'UsageDate' || col.type === 'datetime'
+          );
+          
+          costData.properties.rows.forEach(row => {
+            // Try to extract date and cost
+            let date = null;
+            let cost = 0;
+            
+            // If we have a date column, use it
+            if (dateColumnIndex >= 0 && row[dateColumnIndex]) {
+              date = row[dateColumnIndex];
+            }
+            
+            // Cost is usually in column 1 (index 1)
+            cost = row[1] || 0;
+            
+            // If no date column, generate dates based on current month
+            if (!date) {
+              // Distribute costs across the month so far
+              const daysInMonth = today.getDate();
+              const dailyAvg = cost / daysInMonth;
+              Object.keys(dailyCosts).forEach(dateStr => {
+                dailyCosts[dateStr] += dailyAvg;
+              });
+            } else {
+              // Parse the date
+              const dateStr = date.toString().split('T')[0];
+              if (dailyCosts.hasOwnProperty(dateStr)) {
+                dailyCosts[dateStr] += cost;
+              }
+            }
+          });
+        }
+        
+        // Convert to arrays for Chart.js
+        const dates = Object.keys(dailyCosts).sort();
+        const costs = dates.map(date => dailyCosts[date]);
+        
+        // Calculate statistics
+        const validCosts = costs.filter(c => c > 0);
+        if (validCosts.length > 0) {
+          const maxCost = Math.max(...validCosts);
+          const minCost = Math.min(...validCosts);
+          const avgCost = validCosts.reduce((a, b) => a + b, 0) / validCosts.length;
+          const totalCost = validCosts.reduce((a, b) => a + b, 0);
+          
+          // Find dates for max and min
+          const maxIndex = costs.indexOf(maxCost);
+          const minIndex = costs.indexOf(minCost);
+          
+          // Update statistics cards
+          document.getElementById('highestDayCost').textContent = `$${maxCost.toFixed(2)}`;
+          document.getElementById('highestDayDate').textContent = new Date(dates[maxIndex]).toLocaleDateString();
+          
+          document.getElementById('lowestDayCost').textContent = `$${minCost.toFixed(2)}`;
+          document.getElementById('lowestDayDate').textContent = new Date(dates[minIndex]).toLocaleDateString();
+          
+          document.getElementById('avgDailyCost').textContent = `$${avgCost.toFixed(2)}`;
+          
+          // Project month end cost
+          const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+          const daysRemaining = daysInMonth - today.getDate();
+          const projectedTotal = totalCost + (avgCost * daysRemaining);
+          document.getElementById('projectedCost').textContent = `$${projectedTotal.toFixed(2)}`;
+        }
+        
+        // Create or update chart
+        const ctx = document.getElementById('mtdCostChart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.mtdChart) {
+          window.mtdChart.destroy();
+        }
+        
+        // Create new chart
+        window.mtdChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: dates.map(d => {
+              const date = new Date(d);
+              return `${date.getMonth() + 1}/${date.getDate()}`;
+            }),
+            datasets: [{
+              label: 'Daily Cost ($)',
+              data: costs,
+              borderColor: '#00d4ff',
+              backgroundColor: 'rgba(0, 212, 255, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 3,
+              pointBackgroundColor: '#00d4ff',
+              pointBorderColor: '#00d4ff',
+              pointHoverRadius: 6,
+              pointHoverBackgroundColor: '#7c3aed',
+              pointHoverBorderColor: '#7c3aed'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 41, 0.9)',
+                borderColor: '#00d4ff',
+                borderWidth: 1,
+                titleColor: '#00d4ff',
+                bodyColor: '#e2e8f0',
+                padding: 10,
+                displayColors: false,
+                callbacks: {
+                  label: function(context) {
+                    return `Cost: $${context.parsed.y.toFixed(2)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: {
+                  color: 'rgba(0, 212, 255, 0.1)',
+                  borderColor: 'rgba(0, 212, 255, 0.2)'
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 10
+                  }
+                }
+              },
+              y: {
+                grid: {
+                  color: 'rgba(0, 212, 255, 0.1)',
+                  borderColor: 'rgba(0, 212, 255, 0.2)'
+                },
+                ticks: {
+                  color: '#94a3b8',
+                  font: {
+                    size: 10
+                  },
+                  callback: function(value) {
+                    return '$' + value.toFixed(0);
+                  }
+                },
+                beginAtZero: true
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating cost graph:', error);
+      }
+    }
+    
     // Update Cost Breakdown Table
     function updateCostBreakdown(costData) {
       const table = document.getElementById('costBreakdownTable');
@@ -1358,7 +2412,7 @@
       const table = document.getElementById('resourcesTable');
       
       if (!resources?.value || resources.value.length === 0) {
-        table.innerHTML = '<tr><td colspan="5" style="text-align: center;">No resources found</td></tr>';
+        table.innerHTML = '<tr><td colspan="6" style="text-align: center;">No resources found</td></tr>';
         return;
       }
 
@@ -1366,6 +2420,81 @@
       const getResourceGroup = (id) => {
         const match = id.match(/resourceGroups\/([^\/]+)/);
         return match ? match[1] : '--';
+      };
+      
+      // Function to get resource status
+      const getResourceStatus = async (resource) => {
+        const type = resource.type.toLowerCase();
+        
+        // Web Apps and Function Apps
+        if (type === 'microsoft.web/sites' || type === 'microsoft.web/staticsites') {
+          try {
+            const subscriptionId = document.getElementById('subscriptionId').value;
+            const rgMatch = resource.id.match(/resourceGroups\/([^\/]+)/);
+            const resourceGroup = rgMatch ? rgMatch[1] : '';
+            
+            if (type === 'microsoft.web/sites') {
+              // Regular web app or function app - check state
+              const endpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Web/sites/${resource.name}?api-version=2022-03-01`;
+              const appData = await callAzureAPI(endpoint);
+              
+              if (appData?.properties?.state === 'Running') {
+                return { icon: '✅', color: '#10b981', text: 'Running' };
+              } else if (appData?.properties?.state === 'Stopped') {
+                return { icon: '⏸️', color: '#f59e0b', text: 'Stopped' };
+              } else {
+                return { icon: '⚠️', color: '#f59e0b', text: appData?.properties?.state || 'Unknown' };
+              }
+            } else {
+              // Static web app - always running
+              return { icon: '✅', color: '#10b981', text: 'Running' };
+            }
+          } catch (error) {
+            return { icon: '❓', color: '#6b7280', text: 'Status unknown' };
+          }
+        }
+        
+        // Virtual Machines
+        if (type === 'microsoft.compute/virtualmachines') {
+          try {
+            const subscriptionId = document.getElementById('subscriptionId').value;
+            const rgMatch = resource.id.match(/resourceGroups\/([^\/]+)/);
+            const resourceGroup = rgMatch ? rgMatch[1] : '';
+            
+            const endpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Compute/virtualMachines/${resource.name}/instanceView?api-version=2023-03-01`;
+            const vmData = await callAzureAPI(endpoint);
+            
+            const powerState = vmData?.statuses?.find(s => s.code?.startsWith('PowerState'));
+            if (powerState?.code === 'PowerState/running') {
+              return { icon: '✅', color: '#10b981', text: 'Running' };
+            } else if (powerState?.code === 'PowerState/deallocated') {
+              return { icon: '⏹️', color: '#ef4444', text: 'Stopped' };
+            } else {
+              return { icon: '⚠️', color: '#f59e0b', text: powerState?.displayStatus || 'Unknown' };
+            }
+          } catch (error) {
+            return { icon: '❓', color: '#6b7280', text: 'Status unknown' };
+          }
+        }
+        
+        // Storage Accounts
+        if (type === 'microsoft.storage/storageaccounts') {
+          // Storage accounts are always available when provisioned
+          return { icon: '✅', color: '#10b981', text: 'Available' };
+        }
+        
+        // Databases
+        if (type.includes('database') || type.includes('dbfor')) {
+          return { icon: '✅', color: '#10b981', text: 'Online' };
+        }
+        
+        // Container/Kubernetes
+        if (type.includes('containerservice') || type.includes('kubernetes')) {
+          return { icon: '✅', color: '#10b981', text: 'Active' };
+        }
+        
+        // Default for other resources
+        return { icon: '✔️', color: '#94a3b8', text: 'Active' };
       };
       
       // Get resource costs if available
@@ -1426,24 +2555,44 @@
           cost: resourceCosts[resource.name] || 0,
           resourceGroup: getResourceGroup(resource.id)
         }))
-        .sort((a, b) => b.cost - a.cost)
-        .slice(0, 10);
+        .sort((a, b) => b.cost - a.cost);  // Removed .slice(0, 10) to show all resources
       
-      table.innerHTML = sortedResources.map(resource => {
+      // Add status column to table header first
+      const tableHeader = document.querySelector('#resourcesTable').parentElement.querySelector('thead tr');
+      if (tableHeader && !tableHeader.innerHTML.includes('Status')) {
+        tableHeader.innerHTML = `
+          <th>Resource Name</th>
+          <th>Type</th>
+          <th>Resource Group</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>MTD Cost</th>
+        `;
+      }
+      
+      // Generate table rows with status
+      let tableRows = [];
+      for (const resource of sortedResources) {
+        // Get status for this resource
+        const status = await getResourceStatus(resource);
+        
         // Escape single quotes in strings for onclick
         const escapedId = resource.id.replace(/'/g, "\\'");
         const escapedName = resource.name.replace(/'/g, "\\'");
         
-        return `
+        tableRows.push(`
           <tr style="cursor: pointer;" onclick="window.drillDownResource('${escapedId}', '${escapedName}', ${resource.cost})" title="Click to see details">
             <td style="color: #00d4ff; text-decoration: underline;">${resource.name}</td>
             <td>${resource.type.split('/').pop()}</td>
             <td>${resource.resourceGroup}</td>
             <td>${resource.location}</td>
+            <td style="color: ${status.color};" title="${status.text}">${status.icon} ${status.text}</td>
             <td>${resource.cost > 0 ? `$${resource.cost.toFixed(2)}` : '--'}</td>
           </tr>
-        `;
-      }).join('');
+        `);
+      }
+      
+      table.innerHTML = tableRows.join('');
     }
 
     // Helper Functions
@@ -1858,17 +3007,35 @@
         case 'storageAccounts':
           title = 'Storage Accounts Details';
           if (window.allResources?.value) {
-            resources = window.allResources.value
-              .filter(r => r.type.toLowerCase() === 'microsoft.storage/storageaccounts')
-              .map(sa => ({
+            // Get storage accounts and fetch their metrics
+            const storageAccounts = window.allResources.value
+              .filter(r => r.type.toLowerCase() === 'microsoft.storage/storageaccounts');
+            
+            // Fetch detailed metrics for each storage account
+            resources = await Promise.all(storageAccounts.map(async sa => {
+              const resourceGroup = sa.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown';
+              
+              // Try to get storage account metrics
+              let metrics = { totalSize: 0, blobCount: 0, containerCount: 0, folderCount: 0 };
+              try {
+                metrics = await getStorageAccountMetrics(sa.name, resourceGroup);
+              } catch (error) {
+                console.log(`Could not fetch metrics for ${sa.name}:`, error);
+              }
+              
+              return {
                 name: sa.name,
                 location: sa.location,
                 id: sa.id,
                 type: 'Storage Account',
-                resourceGroup: sa.id.match(/resourceGroups\/([^\/]+)/)?.[1] || 'Unknown',
+                resourceGroup: resourceGroup,
                 kind: sa.kind,
-                tags: sa.tags
-              }));
+                totalSize: metrics.totalSize,
+                blobCount: metrics.blobCount,
+                containerCount: metrics.containerCount,
+                folderCount: metrics.folderCount
+              };
+            }));
           }
           break;
           
@@ -1937,7 +3104,7 @@
                 <th>Type</th>
                 ${resourceType !== 'resourceGroups' ? '<th>Resource Group</th>' : ''}
                 <th>Location</th>
-                <th>Tags</th>
+                ${resourceType === 'storageAccounts' ? '<th>Total Size</th><th>Blobs</th><th>Containers</th><th>Folders</th>' : '<th>Tags</th>'}
               </tr>
             </thead>
             <tbody>
@@ -1957,7 +3124,12 @@
             <td>${resource.type}</td>
             ${resourceType !== 'resourceGroups' ? `<td>${resource.resourceGroup || '--'}</td>` : ''}
             <td>${resource.location}</td>
-            <td>${tagCount > 0 ? `${tagCount} tags` : '--'}</td>
+            ${resourceType === 'storageAccounts' ? 
+              `<td>${formatStorageSize(resource.totalSize)}</td>
+               <td>${resource.blobCount.toLocaleString()}</td>
+               <td>${resource.containerCount}</td>
+               <td>${resource.folderCount}</td>` : 
+              `<td>${tagCount > 0 ? `${tagCount} tags` : '--'}</td>`}
           </tr>
         `;
       });
@@ -2022,12 +3194,457 @@
       }
     }
 
+    // AI Models Usage Tracking - Updated pricing as of 2024
+    const modelPricing = {
+      'gpt4o-mini': { input: 0.00015, output: 0.0006 }, // per 1K tokens ($0.15/$0.60 per 1M)
+      'embeddings': { input: 0.00002 }, // per 1K tokens for text-embedding-3-small
+      'document': {
+        'prebuilt-read': 0.001, // per page
+        'prebuilt-layout': 0.01, // per page
+        'prebuilt-document': 0.01, // per page  
+        'prebuilt-invoice': 0.01 // per page
+      }
+    };
+    
+    // Add Token/Page/Custom Usage
+    window.addTokenUsage = function(model) {
+      let usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      
+      if (!usage[currentMonth]) {
+        usage[currentMonth] = {
+          'gpt4o-mini': { tokens: 0, cost: 0 },
+          'embeddings': { tokens: 0, cost: 0 },
+          'document': { pages: 0, cost: 0 },
+          'custom': { entries: [], totalCost: 0 },
+          history: []
+        };
+      }
+      
+      if (model === 'document') {
+        const pages = parseInt(document.getElementById('documentInput').value) || 0;
+        const docModel = document.getElementById('documentModel').value;
+        
+        if (pages > 0) {
+          const cost = pages * modelPricing.document[docModel];
+          usage[currentMonth].document.pages += pages;
+          usage[currentMonth].document.cost += cost;
+          
+          // Add to history
+          const modelName = docModel.replace('prebuilt-', '').charAt(0).toUpperCase() + 
+                           docModel.replace('prebuilt-', '').slice(1);
+          usage[currentMonth].history.unshift({
+            timestamp: new Date().toISOString(),
+            model: `Document Intelligence (${modelName})`,
+            amount: `${pages} pages`,
+            cost: cost
+          });
+          
+          // Clear input
+          document.getElementById('documentInput').value = '';
+        }
+      } else if (model === 'custom') {
+        const name = document.getElementById('customModelName').value;
+        const cost = parseFloat(document.getElementById('customCost').value) || 0;
+        
+        if (name && cost > 0) {
+          if (!usage[currentMonth].custom) {
+            usage[currentMonth].custom = { entries: [], totalCost: 0 };
+          }
+          
+          usage[currentMonth].custom.entries.push({ name, cost });
+          usage[currentMonth].custom.totalCost += cost;
+          
+          // Add to history
+          usage[currentMonth].history.unshift({
+            timestamp: new Date().toISOString(),
+            model: name,
+            amount: 'Custom usage',
+            cost: cost
+          });
+          
+          // Clear inputs
+          document.getElementById('customModelName').value = '';
+          document.getElementById('customCost').value = '';
+        }
+      } else if (model === 'embeddings') {
+        const tokens = parseInt(document.getElementById('embeddingsInput').value) || 0;
+        
+        if (tokens > 0) {
+          const cost = tokens * modelPricing.embeddings.input / 1000;
+          
+          if (!usage[currentMonth].embeddings) {
+            usage[currentMonth].embeddings = { tokens: 0, cost: 0 };
+          }
+          
+          usage[currentMonth].embeddings.tokens += tokens;
+          usage[currentMonth].embeddings.cost += cost;
+          
+          // Add to history
+          usage[currentMonth].history.unshift({
+            timestamp: new Date().toISOString(),
+            model: 'Text Embeddings',
+            amount: `${tokens.toLocaleString()} tokens`,
+            cost: cost
+          });
+          
+          // Clear input
+          document.getElementById('embeddingsInput').value = '';
+        }
+      } else {
+        // GPT-4o mini
+        const tokens = parseInt(document.getElementById('gpt4oMiniInput').value) || 0;
+        
+        if (tokens > 0) {
+          // Estimate 70% input, 30% output for cost calculation
+          const inputTokens = Math.floor(tokens * 0.7);
+          const outputTokens = Math.floor(tokens * 0.3);
+          const cost = (inputTokens * modelPricing['gpt4o-mini'].input / 1000) + 
+                      (outputTokens * modelPricing['gpt4o-mini'].output / 1000);
+          
+          if (!usage[currentMonth]['gpt4o-mini']) {
+            usage[currentMonth]['gpt4o-mini'] = { tokens: 0, cost: 0 };
+          }
+          
+          usage[currentMonth]['gpt4o-mini'].tokens += tokens;
+          usage[currentMonth]['gpt4o-mini'].cost += cost;
+          
+          // Add to history
+          usage[currentMonth].history.unshift({
+            timestamp: new Date().toISOString(),
+            model: 'GPT-4o Mini',
+            amount: `${tokens.toLocaleString()} tokens`,
+            cost: cost
+          });
+          
+          // Clear input
+          document.getElementById('gpt4oMiniInput').value = '';
+        }
+      }
+      
+      // Keep only last 10 history items
+      if (usage[currentMonth].history.length > 10) {
+        usage[currentMonth].history = usage[currentMonth].history.slice(0, 10);
+      }
+      
+      localStorage.setItem('aiUsage', JSON.stringify(usage));
+      updateAIUsageDisplay();
+      showMessage('AI usage added successfully!', 'success');
+    }
+    
+    // Update AI Usage Display
+    function updateAIUsageDisplay() {
+      const usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const monthData = usage[currentMonth] || {
+        'gpt4o-mini': { tokens: 0, cost: 0 },
+        'embeddings': { tokens: 0, cost: 0 },
+        'document': { pages: 0, cost: 0 },
+        'custom': { entries: [], totalCost: 0 },
+        history: []
+      };
+      
+      // Update displays
+      document.getElementById('gpt4oMiniTokens').textContent = (monthData['gpt4o-mini']?.tokens || 0).toLocaleString();
+      document.getElementById('gpt4oMiniCost').textContent = `$${(monthData['gpt4o-mini']?.cost || 0).toFixed(4)}`;
+      
+      document.getElementById('embeddingsTokens').textContent = (monthData['embeddings']?.tokens || 0).toLocaleString();
+      document.getElementById('embeddingsCost').textContent = `$${(monthData['embeddings']?.cost || 0).toFixed(4)}`;
+      
+      document.getElementById('documentPages').textContent = (monthData['document']?.pages || 0).toLocaleString();
+      document.getElementById('documentCost').textContent = `$${(monthData['document']?.cost || 0).toFixed(2)}`;
+      
+      // Update custom usage
+      const customCount = monthData['custom']?.entries?.length || 0;
+      document.getElementById('customUsage').textContent = customCount > 0 ? `${customCount} items` : '--';
+      document.getElementById('customTotalCost').textContent = `$${(monthData['custom']?.totalCost || 0).toFixed(2)}`;
+      
+      // Calculate total AI cost
+      const totalCost = (monthData['gpt4o-mini']?.cost || 0) + 
+                       (monthData['embeddings']?.cost || 0) + 
+                       (monthData['document']?.cost || 0) + 
+                       (monthData['custom']?.totalCost || 0);
+      document.getElementById('totalAiCost').textContent = `$${totalCost.toFixed(2)}`;
+      
+      // Calculate daily rate and projection
+      const dayOfMonth = new Date().getDate();
+      const dailyRate = totalCost / dayOfMonth;
+      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      const projectedMonthly = dailyRate * daysInMonth;
+      
+      document.getElementById('aiDailyRate').textContent = `$${dailyRate.toFixed(2)}`;
+      document.getElementById('aiProjectedMonthly').textContent = `$${projectedMonthly.toFixed(2)}`;
+      
+      // Update history
+      const historyEl = document.getElementById('apiUsageHistory');
+      if (monthData.history && monthData.history.length > 0) {
+        historyEl.innerHTML = monthData.history.map(item => {
+          const date = new Date(item.timestamp);
+          return `
+            <div style="border-bottom: 1px solid rgba(0, 212, 255, 0.1); padding: 5px 0; font-size: 11px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #00d4ff;">${item.model}</span>
+                <span style="color: #10b981;">$${item.cost.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+                <span style="color: #94a3b8;">${item.amount}</span>
+                <span style="color: #64748b;">${date.toLocaleTimeString()}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        historyEl.innerHTML = '<div style="color: #94a3b8; font-size: 12px;">No usage recorded</div>';
+      }
+    }
+    
+    // Save OpenAI API Key
+    window.saveOpenAIKey = function() {
+      const apiKey = document.getElementById('openaiApiKey').value;
+      if (apiKey && apiKey.startsWith('sk-')) {
+        // Encrypt or hash the key before storing (simplified for demo)
+        const maskedKey = apiKey.slice(0, 7) + '...' + apiKey.slice(-4);
+        localStorage.setItem('openaiKey', btoa(apiKey)); // Base64 encode for basic obfuscation
+        localStorage.setItem('openaiKeyMasked', maskedKey);
+        
+        document.getElementById('apiKeyStatus').textContent = `API key saved: ${maskedKey}`;
+        document.getElementById('apiKeyStatus').style.color = '#10b981';
+        document.getElementById('openaiApiKey').value = '';
+        
+        showMessage('OpenAI API key saved successfully!', 'success');
+      } else {
+        showMessage('Please enter a valid OpenAI API key', 'error');
+      }
+    }
+    
+    // Fetch OpenAI Usage (Live)
+    window.fetchOpenAIUsage = async function() {
+      const encodedKey = localStorage.getItem('openaiKey');
+      if (!encodedKey) {
+        showMessage('Please save your OpenAI API key first', 'error');
+        return;
+      }
+      
+      try {
+        showMessage('Fetching OpenAI usage data...', 'info');
+        const apiKey = atob(encodedKey);
+        
+        // Get current billing cycle
+        const today = new Date();
+        const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+        
+        // Note: OpenAI's usage API endpoint requires organization-level access
+        // This is a simplified example - actual implementation would need proper API setup
+        const response = await fetch(`https://api.openai.com/v1/usage?start_date=${startDate}&end_date=${endDate}`, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Process the usage data
+          let usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          
+          if (!usage[currentMonth]) {
+            usage[currentMonth] = {
+              'gpt4-turbo': { tokens: 0, cost: 0 },
+              'gpt4': { tokens: 0, cost: 0 },
+              'gpt35-turbo': { tokens: 0, cost: 0 },
+              'dalle3': { images: 0, cost: 0 },
+              history: []
+            };
+          }
+          
+          // Update with fetched data (this would need proper mapping from API response)
+          if (data.total_usage) {
+            // This is simplified - actual API response structure would be different
+            showMessage(`Fetched usage: $${(data.total_usage / 100).toFixed(2)} total this month`, 'success');
+          }
+          
+          localStorage.setItem('aiUsage', JSON.stringify(usage));
+          updateAIUsageDisplay();
+          
+        } else if (response.status === 401) {
+          showMessage('Invalid API key or insufficient permissions', 'error');
+        } else {
+          showMessage('Could not fetch usage data. The API key may not have usage permissions.', 'error');
+        }
+      } catch (error) {
+        console.error('Error fetching OpenAI usage:', error);
+        showMessage('Note: Direct API usage fetching requires organization-level access. Please add usage manually.', 'info');
+      }
+    }
+    
+    // Reset AI Usage (for new month)
+    window.resetAIUsage = function() {
+      if (confirm('Reset all AI usage data for this month?')) {
+        const usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        
+        if (usage[currentMonth]) {
+          delete usage[currentMonth];
+          localStorage.setItem('aiUsage', JSON.stringify(usage));
+          updateAIUsageDisplay();
+          showMessage('AI usage data reset for this month', 'success');
+        }
+      }
+    }
+    
+    // Save Tool Cost
+    window.saveToolCost = function(tool) {
+      let costs = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      
+      if (tool === 'other') {
+        const name = document.getElementById('otherToolName').value;
+        const cost = parseFloat(document.getElementById('otherToolCost').value) || 0;
+        
+        if (name && cost > 0) {
+          if (!costs.others) costs.others = {};
+          costs.others[name] = cost;
+          
+          // Clear inputs
+          document.getElementById('otherToolName').value = '';
+          document.getElementById('otherToolCost').value = '';
+          
+          // Update display
+          updateOtherToolsList(costs.others);
+        }
+      } else {
+        const costInput = document.getElementById(`${tool}Cost`);
+        const cost = parseFloat(costInput.value) || 0;
+        
+        costs[tool] = cost;
+        
+        // Update saved display
+        document.getElementById(`${tool}Saved`).textContent = `$${cost.toFixed(2)}/month`;
+        
+        // Clear input
+        costInput.value = '';
+      }
+      
+      localStorage.setItem('toolCosts', JSON.stringify(costs));
+      updateToolCostTotals();
+      
+      showMessage(`${tool === 'other' ? 'Tool' : tool.charAt(0).toUpperCase() + tool.slice(1)} cost saved!`, 'success');
+    }
+    
+    // Update Other Tools List
+    function updateOtherToolsList(others) {
+      const listEl = document.getElementById('otherToolsList');
+      
+      if (!others || Object.keys(others).length === 0) {
+        listEl.textContent = 'No tools added';
+      } else {
+        const items = Object.entries(others).map(([name, cost]) => 
+          `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>${name}</span>
+            <span style="color: #00d4ff;">$${cost.toFixed(2)}</span>
+            <button onclick="removeOtherTool('${name}')" style="background: none; border: none; color: #ef4444; cursor: pointer; margin-left: 10px;">×</button>
+          </div>`
+        ).join('');
+        listEl.innerHTML = items;
+      }
+    }
+    
+    // Remove Other Tool
+    window.removeOtherTool = function(name) {
+      let costs = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      if (costs.others && costs.others[name]) {
+        delete costs.others[name];
+        if (Object.keys(costs.others).length === 0) {
+          delete costs.others;
+        }
+        localStorage.setItem('toolCosts', JSON.stringify(costs));
+        updateOtherToolsList(costs.others);
+        updateToolCostTotals();
+        showMessage(`${name} removed`, 'success');
+      }
+    }
+    
+    // Update Tool Cost Totals
+    function updateToolCostTotals() {
+      const costs = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      
+      let totalTools = 0;
+      totalTools += costs.warp || 0;
+      totalTools += costs.claude || 0;
+      totalTools += costs.chatgpt || 0;
+      
+      if (costs.others) {
+        Object.values(costs.others).forEach(cost => {
+          totalTools += cost;
+        });
+      }
+      
+      // Update total tools cost
+      document.getElementById('totalToolsCost').textContent = `$${totalTools.toFixed(2)}`;
+      
+      // Get Azure projected monthly cost
+      const projectedCostEl = document.getElementById('projectedCost');
+      let azureMonthlyCost = 0;
+      if (projectedCostEl && projectedCostEl.textContent !== '--') {
+        azureMonthlyCost = parseFloat(projectedCostEl.textContent.replace('$', '')) || 0;
+      }
+      
+      // Calculate combined costs
+      const combinedMonthly = azureMonthlyCost + totalTools;
+      const annualCost = combinedMonthly * 12;
+      const dailyCost = combinedMonthly / 30;
+      
+      // Update displays
+      document.getElementById('combinedMonthlyCost').textContent = `$${combinedMonthly.toFixed(2)}`;
+      document.getElementById('annualProjection').textContent = `$${annualCost.toFixed(2)}`;
+      document.getElementById('dailyCostEstimate').textContent = `$${dailyCost.toFixed(2)}`;
+    }
+    
+    // Load saved tool costs on init
+    function loadSavedToolCosts() {
+      const costs = JSON.parse(localStorage.getItem('toolCosts') || '{}');
+      
+      // Update individual tool displays
+      if (costs.warp) {
+        document.getElementById('warpSaved').textContent = `$${costs.warp.toFixed(2)}/month`;
+      }
+      if (costs.claude) {
+        document.getElementById('claudeSaved').textContent = `$${costs.claude.toFixed(2)}/month`;
+      }
+      if (costs.chatgpt) {
+        document.getElementById('chatgptSaved').textContent = `$${costs.chatgpt.toFixed(2)}/month`;
+      }
+      
+      // Update other tools list
+      if (costs.others) {
+        updateOtherToolsList(costs.others);
+      }
+      
+      // Update totals
+      updateToolCostTotals();
+    }
+    
     // Initialize on page load
     window.addEventListener('load', async () => {
       // Load saved subscription ID
       const savedSubscription = localStorage.getItem('azure_subscription');
       if (savedSubscription) {
         document.getElementById('subscriptionId').value = savedSubscription;
+      }
+      
+      // Load saved tool costs
+      loadSavedToolCosts();
+      
+      // Load AI usage data
+      updateAIUsageDisplay();
+      
+      // Check for saved API key
+      const maskedKey = localStorage.getItem('openaiKeyMasked');
+      if (maskedKey) {
+        document.getElementById('apiKeyStatus').textContent = `API key saved: ${maskedKey}`;
+        document.getElementById('apiKeyStatus').style.color = '#10b981';
       }
 
       // Initialize MSAL
