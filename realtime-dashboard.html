@@ -11,7 +11,7 @@
   <script src="https://alcdn.msauth.net/browser/2.32.2/js/msal-browser.min.js"></script>
   
   <!-- Chart.js for cost graphs -->
-  <script src="chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -510,25 +510,25 @@
       <div class="data-section">
         <h3 class="section-title">🔒 Backup & Disaster Recovery Status</h3>
         <div class="dashboard-grid">
-          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3); cursor: pointer;" onclick="window.explainBackupStatus('azure')" title="Click for details">
             <div class="metric-label">Azure Backups Repository</div>
             <div class="metric-value" id="azureBackupStatus" style="font-size: 24px;">⏳</div>
             <div class="metric-subtitle" id="azureBackupTime">Checking...</div>
           </div>
           
-          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3); cursor: pointer;" onclick="window.explainBackupStatus('k8s')" title="Click for details">
             <div class="metric-label">Kubernetes (n8n-aks) Backup</div>
             <div class="metric-value" id="k8sBackupStatus" style="font-size: 24px;">⏳</div>
             <div class="metric-subtitle" id="k8sBackupTime">Checking...</div>
           </div>
           
-          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3); cursor: pointer;" onclick="window.explainBackupStatus('postgres')" title="Click for details">
             <div class="metric-label">PostgreSQL Maintenance</div>
             <div class="metric-value" id="postgresStatus" style="font-size: 24px;">⏳</div>
             <div class="metric-subtitle" id="postgresTime">Checking...</div>
           </div>
           
-          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+          <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3); cursor: pointer;" onclick="window.explainBackupStatus('vault')" title="Click for details">
             <div class="metric-label">Recovery Vault</div>
             <div class="metric-value" id="vaultStatus" style="font-size: 24px;">⏳</div>
             <div class="metric-subtitle" id="vaultItems">Checking...</div>
@@ -797,13 +797,17 @@
         </div>
         
         <div style="margin-top: 20px; padding: 15px; background: rgba(15, 23, 41, 0.4); border-radius: 8px;">
-          <h4 style="color: #00d4ff; margin-bottom: 10px;">OpenAI API Key Configuration</h4>
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">Azure OpenAI Service Tracking</h4>
           <div class="input-group">
-            <input type="password" class="input-field" id="openaiApiKey" placeholder="sk-..." style="margin: 5px 0;">
-            <button class="btn btn-secondary" onclick="saveOpenAIKey()" style="margin-top: 5px;">Save API Key</button>
-            <button class="btn btn-secondary" onclick="fetchOpenAIUsage()" style="margin-top: 5px; margin-left: 10px;">Fetch Live Usage</button>
+            <button class="btn btn-secondary" onclick="fetchAzureOpenAIUsage()" style="margin-top: 5px;">Fetch Azure OpenAI Usage</button>
+            <button class="btn btn-secondary" onclick="fetchCognitiveServicesUsage()" style="margin-top: 5px; margin-left: 10px;">Fetch Cognitive Services</button>
           </div>
-          <div class="metric-subtitle" id="apiKeyStatus" style="margin-top: 10px;">No API key configured</div>
+          <div class="metric-subtitle" id="apiKeyStatus" style="margin-top: 10px;">Connected via Azure AD authentication</div>
+          <div class="code-block" style="margin-top: 10px; font-size: 11px;">
+            <strong>Note:</strong> GPT usage is now tracked through Azure OpenAI Service.<br>
+            Your Azure subscription includes access to GPT-4, GPT-3.5, and embeddings models.<br>
+            Usage is automatically tracked through Azure Cost Management.
+          </div>
         </div>
       </div>
 
@@ -1349,13 +1353,13 @@
     // Get Resources
     async function getResources() {
       const subscriptionId = document.getElementById('subscriptionId').value;
-      return await callAzureAPI(`/subscriptions/${subscriptionId}/resources?api-version=2021-04-01`);
+      return await callAzureAPI(`/subscriptions/${subscriptionId}/resources?api-version=2023-07-01`);
     }
 
     // Get Resource Groups
     async function getResourceGroups() {
       const subscriptionId = document.getElementById('subscriptionId').value;
-      return await callAzureAPI(`/subscriptions/${subscriptionId}/resourcegroups?api-version=2021-04-01`);
+      return await callAzureAPI(`/subscriptions/${subscriptionId}/resourcegroups?api-version=2023-07-01`);
     }
 
     // Get Storage Account Metrics
@@ -2035,55 +2039,134 @@ spec:
       }
     }
 
+    // Helper function to map service names consistently
+    function mapServiceName(service) {
+      // Ensure service is a string
+      service = String(service || 'Unknown');
+      const serviceLower = service.toLowerCase();
+      
+      // Check direct mapping first
+      if (serviceNameMap[service]) {
+        return serviceNameMap[service];
+      }
+      if (serviceNameMap[serviceLower]) {
+        return serviceNameMap[serviceLower];
+      }
+      
+      // Check if it's a decimal number (Azure often returns numeric codes)
+      if (/^\d+\.?\d*$/.test(service)) {
+        const serviceCode = parseFloat(service).toFixed(0);
+        if (serviceNameMap[serviceCode]) {
+          return serviceNameMap[serviceCode];
+        }
+        if (serviceNameMap[serviceCode + '.0']) {
+          return serviceNameMap[serviceCode + '.0'];
+        }
+        // For unknown numeric codes, provide a better name
+        return `Azure Service ${serviceCode}`;
+      }
+      
+      // Handle Microsoft.* resource provider format
+      if (service.startsWith('microsoft.') || service.startsWith('Microsoft.')) {
+        const cleanedService = service.toLowerCase().replace('microsoft.', '');
+        if (serviceNameMap['microsoft.' + cleanedService]) {
+          return serviceNameMap['microsoft.' + cleanedService];
+        }
+        // Clean up the name
+        return cleanedService
+          .replace(/[_-]/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
+      // Clean up any other format
+      const cleaned = service
+        .replace(/[_-]/g, ' ')
+        .split(' ')
+        .filter(word => word.length > 0)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
+      // If still looks weird (all caps, very short, etc), prefix it
+      if (cleaned.length <= 3 || /^[A-Z0-9]+$/.test(service)) {
+        return `Azure ${cleaned}`;
+      }
+      
+      return cleaned;
+    }
+    
     // Service name mapping - expanded to handle Azure service codes
     const serviceNameMap = {
-      // Common numeric codes from Azure
-      '1': 'Virtual Machines',
+      // Common numeric codes from Azure (decimal format)
+      '0': 'Bandwidth',
+      '0.0': 'Bandwidth',
+      '1': 'Virtual Machines', 
+      '1.0': 'Virtual Machines',
       '2': 'Storage',
-      '3': 'Bandwidth',
+      '2.0': 'Storage',
+      '3': 'Load Balancer',
+      '3.0': 'Load Balancer',
       '4': 'Virtual Network',
-      '5': 'Azure App Service',
-      '6': 'Azure SQL Database',
-      '7': 'Key Vault',
-      '8': 'Load Balancer',
-      '9': 'Azure DNS',
-      '10': 'Azure Monitor',
+      '4.0': 'Virtual Network',
+      '5': 'Azure DNS',
+      '5.0': 'Azure DNS',
+      '6': 'Key Vault',
+      '6.0': 'Key Vault',
+      '7': 'Virtual Network',
+      '7.0': 'Virtual Network',
+      '8': 'Storage',
+      '8.0': 'Storage',
+      '9': 'Azure Monitor',
+      '9.0': 'Azure Monitor',
+      '10': 'Container Registry',
+      '10.0': 'Container Registry',
       '11': 'Azure Active Directory',
-      '12': 'Container Registry',
-      '13': 'Azure Functions',
+      '11.0': 'Azure Active Directory',
+      '12': 'Azure Functions',
+      '12.0': 'Azure Functions',
+      '13': 'Static Web Apps',
+      '13.0': 'Static Web Apps',
       '14': 'Azure Kubernetes Service',
+      '14.0': 'Azure Kubernetes Service',
       '15': 'Azure Backup',
+      '15.0': 'Azure Backup',
       '16': 'Logic Apps',
+      '16.0': 'Logic Apps',
       '17': 'Azure Cognitive Services',
+      '17.0': 'Azure Cognitive Services',
       '18': 'Azure DevOps',
+      '18.0': 'Azure DevOps',
       '19': 'Azure Data Factory',
+      '19.0': 'Azure Data Factory',
       '20': 'Static Web Apps',
-      // Service codes
-      'a1': 'API Management',
-      'a2': 'Application Gateway',
-      'a3': 'Azure Cosmos DB',
-      'a4': 'Azure Database for MySQL',
-      'a5': 'Azure Database for PostgreSQL',
-      'a6': 'Azure Firewall',
-      'a7': 'Azure Front Door',
-      'a8': 'Azure IoT Hub',
-      'a9': 'Azure Machine Learning',
-      'b1': 'Azure Redis Cache',
-      'b2': 'Azure Search',
-      'b3': 'Azure Service Bus',
-      'b4': 'Azure Stream Analytics',
-      'b5': 'Azure Synapse Analytics',
-      'b6': 'Cognitive Services',
-      'b7': 'Event Hubs',
-      'b8': 'ExpressRoute',
-      'b9': 'HDInsight',
-      'c1': 'Media Services',
-      'c2': 'Notification Hubs',
-      'c3': 'Power BI Embedded',
-      'c4': 'Traffic Manager',
-      'c5': 'VPN Gateway',
+      '20.0': 'Static Web Apps',
+      // Common Azure service names (as returned by Cost Management API)
+      'bandwidth': 'Bandwidth',
+      'compute': 'Virtual Machines',
+      'storage': 'Storage',
+      'network': 'Networking',
+      'web': 'Web Apps',
+      'sql': 'SQL Database',
+      'keyvault': 'Key Vault',
+      'key vault': 'Key Vault',
+      'monitor': 'Azure Monitor',
+      'container': 'Container Services',
+      'kubernetes': 'Azure Kubernetes Service',
+      'aks': 'Azure Kubernetes Service',
+      'functions': 'Azure Functions',
+      'static': 'Static Web Apps',
+      'staticwebapps': 'Static Web Apps',
+      'backup': 'Azure Backup',
+      'recovery': 'Recovery Services',
+      'vpn': 'VPN Gateway',
+      'dns': 'Azure DNS',
+      'loadbalancer': 'Load Balancer',
+      'load balancer': 'Load Balancer',
+      'appservice': 'App Service',
+      'app service': 'App Service',
       // Microsoft resource providers
-      'microsoft.compute': 'Compute',
+      'microsoft.compute': 'Virtual Machines',
       'microsoft.storage': 'Storage',
       'microsoft.network': 'Networking',
       'microsoft.web': 'Web Apps',
@@ -2091,6 +2174,7 @@ spec:
       'microsoft.keyvault': 'Key Vault',
       'microsoft.insights': 'Azure Monitor',
       'microsoft.containerregistry': 'Container Registry',
+      'microsoft.containerservice': 'Azure Kubernetes Service',
       'microsoft.kubernetes': 'Kubernetes Service',
       'microsoft.documentdb': 'Cosmos DB',
       'microsoft.cache': 'Redis Cache',
@@ -2103,7 +2187,10 @@ spec:
       'microsoft.cognitiveservices': 'Cognitive Services',
       'microsoft.machinelearning': 'Machine Learning',
       'microsoft.devices': 'IoT Hub',
-      'microsoft.media': 'Media Services'
+      'microsoft.media': 'Media Services',
+      'microsoft.recoveryservices': 'Recovery Services',
+      'microsoft.dbforpostgresql': 'PostgreSQL Database',
+      'microsoft.dbformysql': 'MySQL Database'
     };
     
     // Update Cost Graph
@@ -2896,23 +2983,8 @@ spec:
         let service = String(row[0] || 'Unknown');
         const cost = row[1] || row[0] || 0; // Some responses have cost at index 0
         
-        // Map service names
-        const serviceLower = service.toLowerCase();
-        if (serviceNameMap[service]) {
-          service = serviceNameMap[service];
-        } else if (serviceNameMap[serviceLower]) {
-          service = serviceNameMap[serviceLower];
-        } else if (!isNaN(service)) {
-          // If it's still a number, give it a better name
-          service = `Service ${service}`;
-        } else {
-          // Clean up the service name
-          service = service.replace(/microsoft\./gi, '')
-                          .replace(/[_-]/g, ' ')
-                          .split(' ')
-                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(' ');
-        }
+        // Clean and map service names using the enhanced mapper function
+        service = mapServiceName(service);
         
         if (!serviceData[service]) {
           serviceData[service] = 0;
@@ -3398,85 +3470,167 @@ spec:
       }
     }
     
-    // Save OpenAI API Key
-    window.saveOpenAIKey = function() {
-      const apiKey = document.getElementById('openaiApiKey').value;
-      if (apiKey && apiKey.startsWith('sk-')) {
-        // Encrypt or hash the key before storing (simplified for demo)
-        const maskedKey = apiKey.slice(0, 7) + '...' + apiKey.slice(-4);
-        localStorage.setItem('openaiKey', btoa(apiKey)); // Base64 encode for basic obfuscation
-        localStorage.setItem('openaiKeyMasked', maskedKey);
+    // Fetch Azure OpenAI Usage
+    window.fetchAzureOpenAIUsage = async function() {
+      try {
+        showMessage('Fetching Azure OpenAI usage data...', 'info');
         
-        document.getElementById('apiKeyStatus').textContent = `API key saved: ${maskedKey}`;
-        document.getElementById('apiKeyStatus').style.color = '#10b981';
-        document.getElementById('openaiApiKey').value = '';
+        const subscriptionId = document.getElementById('subscriptionId').value;
         
-        showMessage('OpenAI API key saved successfully!', 'success');
-      } else {
-        showMessage('Please enter a valid OpenAI API key', 'error');
+        // Get Azure OpenAI resources
+        const resources = await getResources();
+        const openAIResources = resources?.value?.filter(r => 
+          r.type.toLowerCase() === 'microsoft.cognitiveservices/accounts' &&
+          (r.kind?.toLowerCase().includes('openai') || r.name.toLowerCase().includes('openai'))
+        ) || [];
+        
+        if (openAIResources.length === 0) {
+          showMessage('No Azure OpenAI resources found in your subscription', 'info');
+          return;
+        }
+        
+        // Get usage metrics for each Azure OpenAI resource
+        let totalTokens = 0;
+        let totalCost = 0;
+        
+        for (const resource of openAIResources) {
+          const rgMatch = resource.id.match(/resourceGroups\/([^\/]+)/);
+          const resourceGroup = rgMatch ? rgMatch[1] : '';
+          
+          try {
+            // Get metrics for the resource
+            const today = new Date();
+            const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+            const endDate = today.toISOString();
+            
+            const metricsEndpoint = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.CognitiveServices/accounts/${resource.name}/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=TokenTransaction&timespan=${startDate}/${endDate}&aggregation=Total`;
+            const metricsData = await callAzureAPI(metricsEndpoint);
+            
+            if (metricsData?.value?.[0]?.timeseries?.[0]?.data) {
+              const dataPoints = metricsData.value[0].timeseries[0].data;
+              dataPoints.forEach(point => {
+                if (point.total) {
+                  totalTokens += point.total;
+                }
+              });
+            }
+          } catch (error) {
+            console.log(`Could not fetch metrics for ${resource.name}:`, error);
+          }
+        }
+        
+        // Update usage display
+        let usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        
+        if (!usage[currentMonth]) {
+          usage[currentMonth] = {
+            'gpt4o-mini': { tokens: 0, cost: 0 },
+            'embeddings': { tokens: 0, cost: 0 },
+            'document': { pages: 0, cost: 0 },
+            'custom': { entries: [], totalCost: 0 },
+            'azureOpenAI': { tokens: 0, cost: 0 },
+            history: []
+          };
+        }
+        
+        // Estimate cost based on Azure OpenAI pricing
+        totalCost = (totalTokens / 1000) * 0.002; // Rough estimate
+        
+        usage[currentMonth].azureOpenAI = { tokens: totalTokens, cost: totalCost };
+        
+        // Add to history
+        if (totalTokens > 0) {
+          usage[currentMonth].history.unshift({
+            timestamp: new Date().toISOString(),
+            model: 'Azure OpenAI Service',
+            amount: `${totalTokens.toLocaleString()} tokens`,
+            cost: totalCost
+          });
+        }
+        
+        localStorage.setItem('aiUsage', JSON.stringify(usage));
+        updateAIUsageDisplay();
+        
+        showMessage(`Azure OpenAI: ${totalTokens.toLocaleString()} tokens used this month ($${totalCost.toFixed(2)})`, 'success');
+        
+      } catch (error) {
+        console.error('Error fetching Azure OpenAI usage:', error);
+        showMessage('Error fetching Azure OpenAI usage. Check your permissions.', 'error');
       }
     }
     
-    // Fetch OpenAI Usage (Live)
-    window.fetchOpenAIUsage = async function() {
-      const encodedKey = localStorage.getItem('openaiKey');
-      if (!encodedKey) {
-        showMessage('Please save your OpenAI API key first', 'error');
-        return;
-      }
-      
+    // Fetch Cognitive Services Usage
+    window.fetchCognitiveServicesUsage = async function() {
       try {
-        showMessage('Fetching OpenAI usage data...', 'info');
-        const apiKey = atob(encodedKey);
+        showMessage('Fetching Cognitive Services usage data...', 'info');
         
-        // Get current billing cycle
-        const today = new Date();
-        const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+        const subscriptionId = document.getElementById('subscriptionId').value;
         
-        // Note: OpenAI's usage API endpoint requires organization-level access
-        // This is a simplified example - actual implementation would need proper API setup
-        const response = await fetch(`https://api.openai.com/v1/usage?start_date=${startDate}&end_date=${endDate}`, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          }
+        // Query Cost Management API for Cognitive Services costs
+        const endpoint = `/subscriptions/${subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-03-01`;
+        
+        const body = {
+          type: 'ActualCost',
+          dataSet: {
+            granularity: 'None',
+            aggregation: {
+              totalCost: {
+                name: 'Cost',
+                function: 'Sum'
+              },
+              totalCostUSD: {
+                name: 'CostUSD',
+                function: 'Sum'
+              }
+            },
+            filter: {
+              dimensions: {
+                name: 'ServiceName',
+                operator: 'In',
+                values: ['Cognitive Services', 'Azure OpenAI', 'Azure Applied AI Services']
+              }
+            }
+          },
+          timeframe: 'MonthToDate'
+        };
+        
+        const costData = await callAzureAPI(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(body)
         });
         
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Process the usage data
-          let usage = JSON.parse(localStorage.getItem('aiUsage') || '{}');
-          const currentMonth = new Date().toISOString().slice(0, 7);
-          
-          if (!usage[currentMonth]) {
-            usage[currentMonth] = {
-              'gpt4-turbo': { tokens: 0, cost: 0 },
-              'gpt4': { tokens: 0, cost: 0 },
-              'gpt35-turbo': { tokens: 0, cost: 0 },
-              'dalle3': { images: 0, cost: 0 },
-              history: []
-            };
-          }
-          
-          // Update with fetched data (this would need proper mapping from API response)
-          if (data.total_usage) {
-            // This is simplified - actual API response structure would be different
-            showMessage(`Fetched usage: $${(data.total_usage / 100).toFixed(2)} total this month`, 'success');
-          }
-          
-          localStorage.setItem('aiUsage', JSON.stringify(usage));
-          updateAIUsageDisplay();
-          
-        } else if (response.status === 401) {
-          showMessage('Invalid API key or insufficient permissions', 'error');
-        } else {
-          showMessage('Could not fetch usage data. The API key may not have usage permissions.', 'error');
+        let totalCost = 0;
+        if (costData?.properties?.rows) {
+          costData.properties.rows.forEach(row => {
+            totalCost += row[0] || 0;
+          });
         }
+        
+        // Update display
+        document.getElementById('apiKeyStatus').textContent = 
+          `Azure Cognitive Services MTD: $${totalCost.toFixed(2)}`;
+        document.getElementById('apiKeyStatus').style.color = '#10b981';
+        
+        showMessage(`Cognitive Services month-to-date cost: $${totalCost.toFixed(2)}`, 'success');
+        
+        // Also check for specific AI resources
+        const resources = await getResources();
+        const aiResources = resources?.value?.filter(r => 
+          r.type.toLowerCase().includes('cognitiveservices') ||
+          r.type.toLowerCase().includes('openai')
+        ) || [];
+        
+        if (aiResources.length > 0) {
+          console.log(`Found ${aiResources.length} AI/Cognitive Services resources:`);
+          aiResources.forEach(r => {
+            console.log(`- ${r.name} (${r.kind || r.type})`);
+          });
+        }
+        
       } catch (error) {
-        console.error('Error fetching OpenAI usage:', error);
-        showMessage('Note: Direct API usage fetching requires organization-level access. Please add usage manually.', 'info');
+        console.error('Error fetching Cognitive Services usage:', error);
+        showMessage('Error fetching Cognitive Services usage. This requires Cost Management Reader role.', 'error');
       }
     }
     
@@ -3624,6 +3778,110 @@ spec:
       
       // Update totals
       updateToolCostTotals();
+    }
+    
+    // Explain Backup Status function
+    window.explainBackupStatus = function(type) {
+      const modal = document.getElementById('detailModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      
+      let title, explanation;
+      const statusEl = document.getElementById(`${type === 'azure' ? 'azureBackup' : type === 'k8s' ? 'k8sBackup' : type === 'postgres' ? 'postgres' : 'vault'}Status`);
+      const statusIcon = statusEl ? statusEl.textContent : '❓';
+      
+      switch(type) {
+        case 'azure':
+          title = 'Azure Backups Repository';
+          explanation = `
+            <h3 style="color: #00d4ff;">Status Icons Explained:</h3>
+            <div style="margin: 20px 0;">
+              <p><span style="font-size: 24px;">✅</span> <strong>Green Check:</strong> Backups are running successfully. Recent backups found in Azure storage.</p>
+              <p><span style="font-size: 24px;">⚠️</span> <strong>Warning:</strong> Backup configuration exists but may need attention.</p>
+              <p><span style="font-size: 24px;">❌</span> <strong>Red X:</strong> No backup configuration found or backups failing.</p>
+              <p><span style="font-size: 24px;">❓</span> <strong>Question Mark:</strong> Unable to determine backup status (check permissions).</p>
+              <p><span style="font-size: 24px;">⏳</span> <strong>Hourglass:</strong> Currently checking backup status...</p>
+            </div>
+            <h3 style="color: #00d4ff; margin-top: 20px;">Current Status: ${statusIcon}</h3>
+            <p>This monitors your Azure Backup vault and storage accounts for recent backup activities. It checks for:</p>
+            <ul style="text-align: left; margin: 10px 20px;">
+              <li>Recovery Services Vaults</li>
+              <li>Backup storage accounts (saxtech-azure-backups)</li>
+              <li>Recent backup job completions</li>
+              <li>Backup policy compliance</li>
+            </ul>
+          `;
+          break;
+          
+        case 'k8s':
+          title = 'Kubernetes (n8n-aks) Backup';
+          explanation = `
+            <h3 style="color: #00d4ff;">Status Icons Explained:</h3>
+            <div style="margin: 20px 0;">
+              <p><span style="font-size: 24px;">✅</span> <strong>Green Check:</strong> AKS cluster is running and backups are configured.</p>
+              <p><span style="font-size: 24px;">⚠️</span> <strong>Warning:</strong> Cluster exists but is stopped or degraded.</p>
+              <p><span style="font-size: 24px;">❌</span> <strong>Red X:</strong> No AKS cluster found.</p>
+              <p><span style="font-size: 24px;">❓</span> <strong>Question Mark:</strong> Unable to determine cluster status.</p>
+            </div>
+            <h3 style="color: #00d4ff; margin-top: 20px;">Current Status: ${statusIcon}</h3>
+            <p>This monitors your n8n automation platform running on Azure Kubernetes Service (AKS). It checks:</p>
+            <ul style="text-align: left; margin: 10px 20px;">
+              <li>AKS cluster health and running state</li>
+              <li>Persistent volume backups</li>
+              <li>Kubernetes workload snapshots</li>
+              <li>n8n workflow backup status</li>
+            </ul>
+          `;
+          break;
+          
+        case 'postgres':
+          title = 'PostgreSQL Maintenance';
+          explanation = `
+            <h3 style="color: #00d4ff;">Status Icons Explained:</h3>
+            <div style="margin: 20px 0;">
+              <p><span style="font-size: 24px;">✅</span> <strong>Green Check:</strong> PostgreSQL databases are online and maintenance is up to date.</p>
+              <p><span style="font-size: 24px;">⚠️</span> <strong>Warning:</strong> Database found but maintenance may be needed.</p>
+              <p><span style="font-size: 24px;">❌</span> <strong>Red X:</strong> No PostgreSQL databases found.</p>
+              <p><span style="font-size: 24px;">❓</span> <strong>Question Mark:</strong> Unable to determine database status.</p>
+            </div>
+            <h3 style="color: #00d4ff; margin-top: 20px;">Current Status: ${statusIcon}</h3>
+            <p>This monitors your PostgreSQL database servers and their maintenance status. It tracks:</p>
+            <ul style="text-align: left; margin: 10px 20px;">
+              <li>Database server availability</li>
+              <li>Automated backup schedules</li>
+              <li>Point-in-time restore capability</li>
+              <li>Maintenance window compliance</li>
+              <li>Geo-redundant backup status</li>
+            </ul>
+          `;
+          break;
+          
+        case 'vault':
+          title = 'Recovery Vault';
+          explanation = `
+            <h3 style="color: #00d4ff;">Status Icons Explained:</h3>
+            <div style="margin: 20px 0;">
+              <p><span style="font-size: 24px;">✅</span> <strong>Green Check:</strong> Recovery vault is active with protected items.</p>
+              <p><span style="font-size: 24px;">⚠️</span> <strong>Warning:</strong> Vault exists but has no protected items or needs configuration.</p>
+              <p><span style="font-size: 24px;">❌</span> <strong>Red X:</strong> No recovery vault found.</p>
+              <p><span style="font-size: 24px;">❓</span> <strong>Question Mark:</strong> Unable to determine vault status.</p>
+            </div>
+            <h3 style="color: #00d4ff; margin-top: 20px;">Current Status: ${statusIcon}</h3>
+            <p>Azure Recovery Services Vault is the central backup repository. It manages:</p>
+            <ul style="text-align: left; margin: 10px 20px;">
+              <li>VM backup policies and schedules</li>
+              <li>File and folder backup configurations</li>
+              <li>SQL database backup policies</li>
+              <li>Disaster recovery configurations</li>
+              <li>Cross-region replication settings</li>
+            </ul>
+          `;
+          break;
+      }
+      
+      modalTitle.textContent = title;
+      modalBody.innerHTML = explanation;
+      modal.classList.add('active');
     }
     
     // Initialize on page load

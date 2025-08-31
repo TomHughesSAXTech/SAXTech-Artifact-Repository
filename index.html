@@ -1529,7 +1529,7 @@
                         <div class="artifacts-header">Project Artifacts (${project.artifacts.length})</div>
                         <div class="artifact-list">
                             ${project.artifacts.map(artifact => `
-                        <div class="artifact-item">
+                        <div class="artifact-item" style="cursor: pointer;" onclick="viewArtifact('${project.id}', '${artifact.name}', '${artifact.type}', '${artifact.blobUrl || ''}')">
                             <div class="artifact-info">
                                 <div class="artifact-icon">${artifact.icon}</div>
                                 <div class="artifact-name">${artifact.name}</div>
@@ -1537,7 +1537,11 @@
                             <div class="artifact-meta">
                                 <span class="artifact-type">${artifact.type}</span>
                                 <span class="artifact-size">${artifact.size}</span>
-                                ${(artifact.type === 'N8N' || artifact.type === 'SAXTech Automation') ? 
+                                ${artifact.blobUrl ? 
+                                    `<button class="btn-icon-small" onclick="downloadArtifact('${artifact.blobUrl}', '${artifact.name}'); event.stopPropagation();" title="Download">
+                                        <span style="font-size: 12px;">⬇️</span>
+                                    </button>` : 
+                                    (artifact.type === 'N8N' || artifact.type === 'SAXTech Automation') ? 
                                     `<button class="btn-icon-small" onclick="downloadN8NWorkflow('${project.id}', '${artifact.name}'); event.stopPropagation();" title="Download JSON">
                                         <span style="font-size: 12px;">⬇️</span>
                                     </button>` : ''}
@@ -1572,15 +1576,19 @@
         }
 
         async function openCreateProjectModal() {
-            // Load real resource groups
+            // Load resource groups and set up change handler
             await loadResourceGroups('resourceGroup');
+            // Clear any previous resource selections
+            document.getElementById('resourceCheckboxes').style.display = 'none';
+            document.getElementById('resourceList').innerHTML = '';
+            document.getElementById('frontendUrl').innerHTML = '<option value="">Select Primary Front-End</option>';
             document.getElementById('createProjectModal').classList.add('active');
         }
         
         async function loadResourceGroups(selectId) {
             const selectElement = document.getElementById(selectId);
             
-            // Just use the known resource groups directly
+            // Use known resource groups and add change event listener
             selectElement.innerHTML = `
                 <option value="">Select Resource Group</option>
                 <option value="SAXTech-AI">SAXTech-AI</option>
@@ -1588,6 +1596,20 @@
                 <option value="rg-saxtech-dev">rg-saxtech-dev</option>
                 <option value="rg-saxtech-staging">rg-saxtech-staging</option>
             `;
+            
+            // Add change event listener to load resources when resource group is selected
+            selectElement.removeEventListener('change', handleResourceGroupChange);
+            selectElement.addEventListener('change', handleResourceGroupChange);
+        }
+        
+        // Handle resource group selection change
+        function handleResourceGroupChange(event) {
+            const selectId = event.target.id;
+            if (selectId === 'resourceGroup') {
+                loadResourceGroupResources();
+            } else if (selectId === 'editResourceGroup') {
+                loadEditResourceGroupResources();
+            }
         }
 
         function openUploadModal() {
@@ -1643,6 +1665,16 @@
             document.getElementById('editProjectId').value = project.id;
             document.getElementById('editClientName').value = project.client || '';
             document.getElementById('editProjectName').value = project.name || '';
+            
+            // Load resource groups for edit modal
+            loadResourceGroups('editResourceGroup').then(() => {
+                // Set the selected resource group if it exists
+                if (project.resourceGroup) {
+                    document.getElementById('editResourceGroup').value = project.resourceGroup;
+                    // Trigger resource loading for the selected group
+                    loadEditResourceGroupResources();
+                }
+            });
             document.getElementById('editProjectType').value = project.type || '';
             document.getElementById('editProjectStatus').value = project.status || '';
             document.getElementById('editProjectDescription').value = project.description || '';
@@ -2029,19 +2061,66 @@
         // Make showProjectSummary available globally
         window.showProjectSummary = showProjectSummary;
         
-        // Show Workflow Preview function
+        // Show Workflow Preview function with embedded iframe and zoom controls
         function showWorkflowPreview(workflowUrl) {
             if (!workflowUrl) {
                 showToast('No workflow URL available', 'error');
                 return;
             }
             
-            // If n8nIntegration is available, use its preview function
-            if (window.n8nIntegration && window.n8nIntegration.showWorkflowPreview) {
-                window.n8nIntegration.showWorkflowPreview(workflowUrl);
-            } else {
-                // Fallback: open in new tab
-                window.open(workflowUrl, '_blank');
+            // Create modal with embedded n8n preview
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 95%; width: 95%; height: 90vh;">
+                    <div class="modal-header">
+                        <h2 class="modal-title">n8n Workflow Preview</h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="btn btn-secondary" onclick="zoomWorkflowOut()" title="Zoom Out">➖</button>
+                            <span id="workflowZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
+                            <button class="btn btn-secondary" onclick="zoomWorkflowIn()" title="Zoom In">➕</button>
+                            <button class="btn btn-secondary" onclick="resetWorkflowZoom()" title="Reset Zoom">🔄</button>
+                            <button class="btn btn-secondary" onclick="window.open('${workflowUrl}', '_blank')" title="Open in New Tab">🔗</button>
+                            <button class="close-modal" onclick="this.closest('.modal').remove()">×</button>
+                        </div>
+                    </div>
+                    <div class="modal-body" style="padding: 0; height: calc(100% - 80px); overflow: hidden;">
+                        <iframe id="workflowPreviewFrame" 
+                            src="/n8n-workflow-preview.html" 
+                            style="width: 100%; height: 100%; border: none; transform-origin: top left; transition: transform 0.3s ease;"
+                            title="n8n Workflow Preview">
+                        </iframe>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Initialize zoom functionality
+            window.workflowZoom = 1;
+            
+            window.zoomWorkflowIn = function() {
+                window.workflowZoom = Math.min(window.workflowZoom + 0.1, 2);
+                updateWorkflowZoom();
+            };
+            
+            window.zoomWorkflowOut = function() {
+                window.workflowZoom = Math.max(window.workflowZoom - 0.1, 0.5);
+                updateWorkflowZoom();
+            };
+            
+            window.resetWorkflowZoom = function() {
+                window.workflowZoom = 1;
+                updateWorkflowZoom();
+            };
+            
+            function updateWorkflowZoom() {
+                const iframe = document.getElementById('workflowPreviewFrame');
+                if (iframe) {
+                    iframe.style.transform = `scale(${window.workflowZoom})`;
+                    iframe.style.width = `${100 / window.workflowZoom}%`;
+                    iframe.style.height = `${100 / window.workflowZoom}%`;
+                    document.getElementById('workflowZoomLevel').textContent = `${Math.round(window.workflowZoom * 100)}%`;
+                }
             }
         }
         
@@ -2207,6 +2286,55 @@
                 resourceCheckboxesDiv.style.display = 'none';
             }
         }
+        
+        // View Artifact function
+        function viewArtifact(projectId, artifactName, artifactType, blobUrl) {
+            if (blobUrl) {
+                // If we have a blob URL, open it directly
+                window.open(blobUrl, '_blank');
+            } else if (artifactType === 'N8N' || artifactType === 'SAXTech Automation') {
+                // For N8N workflows, show preview
+                const project = projects.find(p => String(p.id) === String(projectId));
+                if (project && project.n8nWorkflows && project.n8nWorkflows.main) {
+                    showWorkflowPreview(project.n8nWorkflows.main);
+                } else {
+                    downloadN8NWorkflow(projectId, artifactName);
+                }
+            } else {
+                // For other types, try to download
+                showToast('Opening artifact...', 'info');
+                if (window.blobManager && window.blobManager.getArtifactUrl) {
+                    const url = window.blobManager.getArtifactUrl(projectId, artifactName);
+                    if (url) {
+                        window.open(url, '_blank');
+                    } else {
+                        showToast('Artifact URL not available', 'error');
+                    }
+                } else {
+                    showToast('Artifact viewing not available', 'error');
+                }
+            }
+        }
+        
+        // Download Artifact function
+        function downloadArtifact(blobUrl, fileName) {
+            if (blobUrl) {
+                // Create a temporary anchor element to trigger download
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast(`Downloading ${fileName}...`);
+            } else {
+                showToast('Download URL not available', 'error');
+            }
+        }
+        
+        // Make functions globally available
+        window.viewArtifact = viewArtifact;
+        window.downloadArtifact = downloadArtifact;
         
         // Download N8N Workflow as JSON
         async function downloadN8NWorkflow(projectId, artifactName) {
