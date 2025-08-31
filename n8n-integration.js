@@ -16,6 +16,7 @@ class N8NIntegration {
         this.syncInterval = null;
         this.lastSync = localStorage.getItem('n8n_last_sync') ? new Date(localStorage.getItem('n8n_last_sync')) : null;
         this.workflowCache = new Map();
+        this.serviceUnavailableLogged = false; // Track if we've already logged 503 error
         
         // Start periodic sync if API key exists
         if (this.apiKey) {
@@ -74,6 +75,15 @@ class N8NIntegration {
                 if (response.status === 401) {
                     throw new Error('Invalid API key');
                 }
+                // Handle 503 Service Unavailable specifically
+                if (response.status === 503) {
+                    // Log once, don't spam the console
+                    if (!this.serviceUnavailableLogged) {
+                        console.log('N8N service is temporarily unavailable (503). Will retry later.');
+                        this.serviceUnavailableLogged = true;
+                    }
+                    throw new Error(`Service temporarily unavailable`);
+                }
                 throw new Error(`Failed to fetch workflow: ${response.status}`);
             }
             
@@ -82,9 +92,15 @@ class N8NIntegration {
             // Cache the workflow data
             this.workflowCache.set(workflowId, data);
             
+            // Reset the service unavailable flag on successful fetch
+            this.serviceUnavailableLogged = false;
+            
             return data;
         } catch (error) {
-            console.error('Error fetching N8N workflow:', error);
+            // Only log non-503 errors or the first 503 error
+            if (!error.message.includes('Service temporarily unavailable')) {
+                console.error('Error fetching N8N workflow:', error);
+            }
             throw error;
         }
     }
@@ -147,13 +163,17 @@ class N8NIntegration {
             console.log(`Synced N8N workflow: ${workflowData.name}`);
             return workflowData;
         } catch (error) {
-            console.error('Error syncing N8N workflow (non-blocking):', error);
-            // Don't block project creation - just log the error
-            console.warn('N8N workflow sync failed due to CORS. The project will be created without workflow sync.');
+            // Only log detailed errors for non-503 issues
+            if (!error.message.includes('Service temporarily unavailable')) {
+                console.error('Error syncing N8N workflow (non-blocking):', error);
+                console.warn('N8N workflow sync failed. The project will be created without workflow sync.');
+            }
             // Return a placeholder object so project creation continues
             return {
                 error: true,
-                message: 'Workflow sync failed - CORS issue. Project created without workflow data.',
+                message: error.message.includes('Service temporarily unavailable') ? 
+                         'N8N service temporarily unavailable' : 
+                         'Workflow sync failed. Project created without workflow data.',
                 workflowId: parsed.workflowId
             };
         }
@@ -182,8 +202,11 @@ class N8NIntegration {
                 }
             }
         } catch (error) {
-            console.error('Error in syncProjectWorkflows (non-blocking):', error);
-            console.warn('Continuing without n8n workflow sync');
+            // Only log if not service unavailable
+            if (!error.message.includes('Service temporarily unavailable')) {
+                console.error('Error in syncProjectWorkflows (non-blocking):', error);
+                console.warn('Continuing without n8n workflow sync');
+            }
         }
         
         return results;
@@ -191,9 +214,13 @@ class N8NIntegration {
     
     // Sync all workflows across all projects
     async syncAllWorkflows() {
-        console.log('Starting N8N workflow sync...');
+        // Only log if service is available or on first attempt
+        if (!this.serviceUnavailableLogged) {
+            console.log('Starting N8N workflow sync...');
+        }
         const startTime = Date.now();
         let syncCount = 0;
+        let hasErrors = false;
         
         // Wait for blob manager to initialize if it hasn't yet
         if (!window.blobManager) {
@@ -204,21 +231,34 @@ class N8NIntegration {
         }
         
         if (!window.blobManager.projects || window.blobManager.projects.length === 0) {
-            console.log('No projects available for N8N sync');
+            // Only log if not in service unavailable state
+            if (!this.serviceUnavailableLogged) {
+                console.log('No projects available for N8N sync');
+            }
             return;
         }
         
         for (const project of window.blobManager.projects) {
             const results = await this.syncProjectWorkflows(project);
-            syncCount += results.length;
+            // Count successful syncs (results without error flag)
+            syncCount += results.filter(r => !r.error).length;
+            if (results.some(r => r.error)) {
+                hasErrors = true;
+            }
         }
         
-        // Update last sync time
-        this.lastSync = new Date();
-        localStorage.setItem('n8n_last_sync', this.lastSync.toISOString());
+        // Update last sync time only if we had some successful syncs
+        if (syncCount > 0) {
+            this.lastSync = new Date();
+            localStorage.setItem('n8n_last_sync', this.lastSync.toISOString());
+        }
         
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        console.log(`N8N sync completed: ${syncCount} workflows in ${duration}s`);
+        
+        // Only log completion if service is available or we had successful syncs
+        if (syncCount > 0 || !this.serviceUnavailableLogged) {
+            console.log(`N8N sync completed: ${syncCount} workflows in ${duration}s${hasErrors ? ' (some failed)' : ''}`);
+        }
         
         return syncCount;
     }
