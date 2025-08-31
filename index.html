@@ -1771,12 +1771,12 @@
                     selectedResources.push(checkbox.value);
                 });
                 
-                // Collect N8N workflow URLs
-                const n8nMainUrl = document.getElementById('n8nMainUrl').value;
-                const n8nSubUrls = document.getElementById('n8nSubUrls').value
-                    .split('\n')
-                    .filter(url => url.trim())
-                    .map(url => url.trim());
+            // Collect SAXTech Automation Engine workflow URLs
+            const n8nMainUrl = document.getElementById('n8nMainUrl').value;
+            const n8nSubUrls = document.getElementById('n8nSubUrls').value
+                .split('\n')
+                .filter(url => url.trim())
+                .map(url => url.trim());
                 
                 const projectData = {
                     name: document.getElementById('projectName').value,
@@ -1800,11 +1800,11 @@
                 const newProject = window.blobManager.createProject(projectData);
                 await window.blobManager.saveProjectsToBlob();
                 
-                // Sync N8N workflows if configured
+                // Sync SAXTech Automation Engine workflows if configured
                 if (window.n8nIntegration && (n8nMainUrl || n8nSubUrls.length > 0)) {
                     const syncedWorkflows = await window.n8nIntegration.syncProjectWorkflows(newProject);
                     if (syncedWorkflows && syncedWorkflows.length > 0) {
-                        showToast(`Project created and ${syncedWorkflows.length} N8N workflow(s) synced`);
+                        showToast(`Project created and ${syncedWorkflows.length} SAXTech Automation workflow(s) synced`);
                     }
                 }
                 
@@ -1835,7 +1835,7 @@
                 selectedEditResources.push(checkbox.value);
             });
             
-            // Collect N8N workflow URLs for edit
+            // Collect SAXTech Automation Engine workflow URLs for edit
             const editN8nMainUrl = document.getElementById('editN8nMainUrl').value;
             const editN8nSubUrls = document.getElementById('editN8nSubUrls').value
                 .split('\n')
@@ -2074,7 +2074,7 @@
             modal.innerHTML = `
                 <div class="modal-content" style="max-width: 95%; width: 95%; height: 90vh;">
                     <div class="modal-header">
-                        <h2 class="modal-title">n8n Workflow Preview</h2>
+                        <h2 class="modal-title">SAXTech Automation Engine Workflow Preview</h2>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <button class="btn btn-secondary" onclick="zoomWorkflowOut()" title="Zoom Out">➖</button>
                             <span id="workflowZoomLevel" style="min-width: 50px; text-align: center;">100%</span>
@@ -2087,7 +2087,7 @@
                     <div class="modal-body" style="padding: 20px; height: calc(100% - 80px); overflow: auto; background: #0a0e27;">
                         <div style="text-align: center; padding: 40px; border: 2px dashed rgba(0, 212, 255, 0.3); border-radius: 12px; background: rgba(0, 212, 255, 0.05);">
                             <div style="font-size: 48px; margin-bottom: 20px;">⚙️</div>
-                            <h3 style="color: #00d4ff; margin-bottom: 10px;">n8n Workflow Preview</h3>
+                            <h3 style="color: #00d4ff; margin-bottom: 10px;">SAXTech Automation Engine Workflow Preview</h3>
                             <p style="color: #94a3b8; margin-bottom: 20px;">Direct embedding is not available due to security restrictions.</p>
                             <button class="btn btn-primary" onclick="window.open('${workflowUrl}', '_blank')" style="margin: 10px;">
                                 🔗 Open Workflow in New Tab
