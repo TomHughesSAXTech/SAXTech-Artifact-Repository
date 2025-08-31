@@ -1297,7 +1297,11 @@
           grouping: [
             {
               type: 'Dimension',
-              name: 'ServiceName'  // This might be returning codes instead of names
+              name: 'ResourceType'  // Changed to ResourceType to get actual resource types
+            },
+            {
+              type: 'Dimension',
+              name: 'ResourceGroupName'  // Added resource group for more detail
             }
           ]
         },
@@ -1311,7 +1315,7 @@
       
       // Log to see what Azure is actually returning
       if (result?.properties?.rows && result.properties.rows.length > 0) {
-        console.log('Sample service names from Azure:', result.properties.rows.slice(0, 3).map(r => r[0]));
+        console.log('Sample resource data from Azure:', result.properties.rows.slice(0, 3));
       }
       
       return result;
@@ -1335,7 +1339,17 @@
               name: 'CostUSD',
               function: 'Sum'
             }
-          }
+          },
+          grouping: [
+            {
+              type: 'Dimension',
+              name: 'ResourceType'
+            },
+            {
+              type: 'Dimension',
+              name: 'ResourceGroupName'
+            }
+          ]
         },
         timeframe: 'Custom',
         timePeriod: {
@@ -2935,28 +2949,38 @@ spec:
         return;
       }
       
-      // Process the data by service
-      const serviceData = {};
+      // Process the data by resource type and group
+      const resourceData = {};
       let totalCost = 0;
       
       data.properties.rows.forEach(row => {
-        let service = String(row[0] || 'Unknown');
-        const cost = row[1] || row[0] || 0; // Some responses have cost at index 0
+        // With our new grouping: row[0] = cost, row[1] = ResourceType, row[2] = ResourceGroupName
+        const cost = parseFloat(row[0] || 0);
+        let resourceType = String(row[1] || 'Unknown Resource');
+        const resourceGroup = String(row[2] || 'No Group');
         
-        // Clean and map service names using the enhanced mapper function
-        service = mapServiceName(service);
-        
-        if (!serviceData[service]) {
-          serviceData[service] = 0;
+        // Clean up resource type names (remove Microsoft. prefix and format nicely)
+        if (resourceType.startsWith('Microsoft.')) {
+          resourceType = resourceType.replace('Microsoft.', '').replace(///g, ' - ');
         }
-        serviceData[service] += cost;
+        resourceType = resourceType.split(/[-_]/).map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+        
+        // Create a combined key with resource type and group
+        const resourceKey = `${resourceType} (${resourceGroup})`;
+        
+        if (!resourceData[resourceKey]) {
+          resourceData[resourceKey] = 0;
+        }
+        resourceData[resourceKey] += cost;
         totalCost += cost;
       });
       
-      // Sort services by cost
-      const sortedServices = Object.entries(serviceData)
+      // Sort resources by cost
+      const sortedResources = Object.entries(resourceData)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 15); // Show top 15
+        .slice(0, 20); // Show top 20 resources
       
       // Build the detail view
       let html = `
@@ -2966,16 +2990,16 @@ spec:
             <div class="detail-value">$${totalCost.toFixed(2)}</div>
           </div>
           <div class="detail-item">
-            <div class="detail-label">Services</div>
-            <div class="detail-value">${sortedServices.length}</div>
+            <div class="detail-label">Resources</div>
+            <div class="detail-value">${sortedResources.length}</div>
           </div>
         </div>
         
-        <h3 style="margin-top: 20px; color: #00d4ff;">Cost by Service</h3>
+        <h3 style="margin-top: 20px; color: #00d4ff;">Cost by Resource</h3>
         <table class="data-table" style="margin-top: 10px;">
           <thead>
             <tr>
-              <th>Service</th>
+              <th>Resource Type (Group)</th>
               <th>Cost</th>
               <th>% of Total</th>
             </tr>
@@ -2983,11 +3007,11 @@ spec:
           <tbody>
       `;
       
-      sortedServices.forEach(([service, cost]) => {
+      sortedResources.forEach(([resource, cost]) => {
         const percentage = ((cost / totalCost) * 100).toFixed(1);
         html += `
           <tr>
-            <td>${service}</td>
+            <td>${resource}</td>
             <td>$${cost.toFixed(2)}</td>
             <td>${percentage}%</td>
           </tr>

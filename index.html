@@ -379,6 +379,132 @@
             position: relative;
             overflow: hidden;
         }
+        
+        /* URL Preview Styles */
+        .url-preview-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--sax-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--sax-border);
+            border-radius: 0 0 16px 16px;
+            padding: 16px;
+            margin-top: -1px;
+            opacity: 0;
+            transform: translateY(-100%);
+            transition: all 0.4s ease;
+            pointer-events: none;
+            z-index: 10;
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .project-card:hover .url-preview-container {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+            max-height: 400px;
+        }
+        
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--sax-border);
+        }
+        
+        .preview-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--sax-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .preview-url {
+            font-size: 11px;
+            color: var(--sax-text-dim);
+            margin-left: auto;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .preview-iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(6, 8, 24, 0.8);
+            border: 1px solid var(--sax-border);
+        }
+        
+        .preview-iframe {
+            width: 400%;
+            height: 1200px;
+            transform: scale(0.25);
+            transform-origin: 0 0;
+            border: none;
+            pointer-events: none;
+        }
+        
+        .preview-loading,
+        .preview-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--sax-text-dim);
+            font-size: 13px;
+        }
+        
+        .preview-loading::before {
+            content: '';
+            display: block;
+            width: 30px;
+            height: 30px;
+            margin: 0 auto 12px;
+            border: 2px solid var(--sax-border);
+            border-top-color: var(--sax-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .preview-open-btn {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            padding: 6px 12px;
+            background: var(--gradient-accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 5;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .preview-open-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
 
         .project-card::before {
             content: '';
@@ -1037,6 +1163,7 @@
     <script src="n8n-integration.js"></script>
     <script src="metrics-cache.js"></script>
     <script src="github-integration.js"></script>
+    <script src="preview-handler.js"></script>
 </head>
 <body>
     <div class="noise-overlay"></div>
@@ -1550,6 +1677,29 @@
                             `).join('')}
                         </div>
                     </div>
+                    ${(project.projectUrl || project.frontend) ? `
+                    <div class="url-preview-container" data-project-id="${project.id}">
+                        <div class="preview-header">
+                            <span class="preview-title">🔍 Live Preview</span>
+                            <span class="preview-url">${project.projectUrl || project.frontend}</span>
+                        </div>
+                        <div class="preview-iframe-wrapper">
+                            <div class="preview-loading">Loading preview...</div>
+                            <iframe 
+                                class="preview-iframe" 
+                                data-src="${project.projectUrl || project.frontend}"
+                                sandbox="allow-scripts allow-same-origin"
+                                loading="lazy"
+                                style="display: none;"
+                                onload="this.style.display='block'; this.parentElement.querySelector('.preview-loading')?.remove();"
+                                onerror="this.parentElement.innerHTML='<div class=\'preview-error\'>⚠️<br>Preview unavailable<br><small>Site may block embedding</small></div>';"
+                            ></iframe>
+                            <a href="${project.projectUrl || project.frontend}" target="_blank" class="preview-open-btn">
+                                <span>↗️</span> Open in new tab
+                            </a>
+                        </div>
+                    </div>
+                    ` : ''}
                 `;
                 
                 grid.appendChild(card);
