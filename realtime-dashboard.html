@@ -2961,7 +2961,7 @@ spec:
         
         // Clean up resource type names (remove Microsoft. prefix and format nicely)
         if (resourceType.startsWith('Microsoft.')) {
-          resourceType = resourceType.replace('Microsoft.', '').replace(///g, ' - ');
+          resourceType = resourceType.replace('Microsoft.', '').replace(/\//g, ' - ');
         }
         resourceType = resourceType.split(/[-_]/).map(word => 
           word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()

@@ -132,9 +132,24 @@
                 'microsoft.com',
                 'stackoverflow.com',
                 'twitter.com',
+                'x.com',
                 'facebook.com',
                 'linkedin.com',
-                'youtube.com'
+                'youtube.com',
+                'aol.com',
+                'yahoo.com',
+                'gmail.com',
+                'outlook.com',
+                'reddit.com',
+                'instagram.com',
+                'whatsapp.com',
+                'tiktok.com',
+                'amazon.com',
+                'netflix.com',
+                'spotify.com',
+                'apple.com',
+                'dropbox.com',
+                'salesforce.com'
             ];
             
             // Check if hostname includes any blocked sites

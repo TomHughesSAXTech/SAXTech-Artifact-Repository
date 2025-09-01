@@ -572,8 +572,7 @@
           { from: 'wait1', to: 'followup1', active: true }
         ]
       }
-      ];
-    }
+    ];
     
     let currentWorkflow = null;
     let currentZoom = 1;
@@ -748,7 +747,8 @@
     
     // Get demo workflows if no real ones available
     function getDemoWorkflows() {
-      return [
+      return workflows; // Return the default demo workflows defined at the top
+    }
     
     // Render workflow list
     function renderWorkflowList() {
