@@ -108,9 +108,10 @@
                 wrapper.innerHTML = `
                     <div class="preview-error">
                         <div style="font-size: 24px; margin-bottom: 8px;">🔒</div>
-                        <div>Preview blocked by site policy</div>
+                        <div>Preview Unavailable</div>
                         <small style="color: var(--sax-text-dim); display: block; margin-top: 4px;">
-                            ${new URL(url).hostname}
+                            This site blocks embedding for security.<br />
+                            Click "Open Project" to visit ${new URL(url).hostname}
                         </small>
                     </div>
                 `;
@@ -126,6 +127,10 @@
             const blockedSites = [
                 'github.com',
                 'portal.azure.com',
+                'microsoftonline.com',
+                'login.microsoftonline.com',
+                'login.live.com',
+                'login.windows.net',
                 'chat.openai.com',
                 'claude.ai',
                 'google.com',
