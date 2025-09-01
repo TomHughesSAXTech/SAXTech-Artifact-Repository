@@ -1,0 +1,8 @@
+{
+  "name": "clients-get",
+  "version": "1.0.0",
+  "description": "Azure Function to proxy blob storage access",
+  "dependencies": {
+    "@azure/storage-blob": "^12.17.0"
+  }
+}

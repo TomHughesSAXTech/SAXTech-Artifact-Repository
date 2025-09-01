@@ -1691,7 +1691,7 @@
                             <iframe 
                                 class="preview-iframe" 
                                 data-src="${project.projectUrl || project.frontend}"
-                                sandbox="allow-scripts"
+                                sandbox="allow-scripts allow-same-origin allow-popups"
                                 loading="lazy"
                                 style="display: none;"
                                 onload="this.style.display='block'; this.parentElement.querySelector('.preview-loading')?.remove();"
