@@ -17,6 +17,7 @@ class N8NIntegration {
         this.lastSync = localStorage.getItem('n8n_last_sync') ? new Date(localStorage.getItem('n8n_last_sync')) : null;
         this.workflowCache = new Map();
         this.serviceUnavailableLogged = false; // Track if we've already logged 503 error
+        this.blobManagerRetries = 0; // Initialize retry counter here
         
         // Start periodic sync if API key exists
         if (this.apiKey) {
@@ -224,11 +225,21 @@ class N8NIntegration {
         
         // Wait for blob manager to initialize if it hasn't yet
         if (!window.blobManager) {
-            console.log('Waiting for blob manager to initialize...');
-            // Try again in 2 seconds
-            setTimeout(() => this.syncAllWorkflows(), 2000);
+            // Limit retries to prevent infinite loop
+            this.blobManagerRetries = (this.blobManagerRetries || 0) + 1;
+            if (this.blobManagerRetries <= 5) {  // Max 5 retries (10 seconds total)
+                console.log(`Waiting for blob manager to initialize... (attempt ${this.blobManagerRetries}/5)`);
+                // Try again in 2 seconds
+                setTimeout(() => this.syncAllWorkflows(), 2000);
+            } else {
+                console.warn('Blob manager not available after 5 attempts. Skipping N8N sync.');
+                this.blobManagerRetries = 0;  // Reset for future attempts
+            }
             return;
         }
+        
+        // Reset retry counter once blob manager is available
+        this.blobManagerRetries = 0;
         
         if (!window.blobManager.projects || window.blobManager.projects.length === 0) {
             // Only log if not in service unavailable state
@@ -268,15 +279,17 @@ class N8NIntegration {
         // Clear any existing interval
         this.stopPeriodicSync();
         
-        // Run initial sync
-        this.syncAllWorkflows();
+        // Delay initial sync to allow blob manager to initialize
+        setTimeout(() => {
+            this.syncAllWorkflows();
+        }, 5000); // Wait 5 seconds before first sync attempt
         
         // Set up hourly sync (3600000 ms = 1 hour)
         this.syncInterval = setInterval(() => {
             this.syncAllWorkflows();
         }, 3600000);
         
-        console.log('N8N periodic sync started (hourly)');
+        console.log('N8N periodic sync will start in 5 seconds (then hourly)');
     }
     
     // Stop periodic sync

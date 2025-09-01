@@ -377,7 +377,7 @@
             padding: 24px;
             transition: all 0.4s ease;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
         
         /* URL Preview Styles */
@@ -393,19 +393,19 @@
             padding: 16px;
             margin-top: -1px;
             opacity: 0;
-            transform: translateY(-100%);
-            transition: all 0.4s ease;
+            visibility: hidden;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
             pointer-events: none;
-            z-index: 10;
-            max-height: 0;
-            overflow: hidden;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
         .project-card:hover .url-preview-container {
             opacity: 1;
+            visibility: visible;
             transform: translateY(0);
             pointer-events: all;
-            max-height: 400px;
         }
         
         .preview-header {
@@ -517,12 +517,15 @@
             transform: scaleX(0);
             transform-origin: left;
             transition: transform 0.4s ease;
+            z-index: 1;
         }
 
         .project-card:hover {
             transform: translateY(-8px);
             background: var(--sax-card-hover);
             box-shadow: 0 20px 40px rgba(0, 212, 255, 0.2);
+            z-index: 50;
+            overflow: visible !important;
         }
 
         .project-card:hover::before {
@@ -1688,7 +1691,7 @@
                             <iframe 
                                 class="preview-iframe" 
                                 data-src="${project.projectUrl || project.frontend}"
-                                sandbox="allow-scripts allow-same-origin"
+                                sandbox="allow-scripts"
                                 loading="lazy"
                                 style="display: none;"
                                 onload="this.style.display='block'; this.parentElement.querySelector('.preview-loading')?.remove();"
